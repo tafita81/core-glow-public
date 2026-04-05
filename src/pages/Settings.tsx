@@ -47,16 +47,15 @@ export default function SettingsPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const updates = [
-        { key: "auto_publish", value: JSON.stringify(autoPublish) },
-        { key: "score_threshold", value: JSON.stringify(scoreThreshold[0]) },
-        { key: "science_check", value: JSON.stringify(scienceCheck) },
-        { key: "ethics_check", value: JSON.stringify(ethicsCheck) },
+        { key: "auto_publish", value: autoPublish },
+        { key: "score_threshold", value: scoreThreshold[0] },
+        { key: "science_check", value: scienceCheck },
+        { key: "ethics_check", value: ethicsCheck },
       ];
       for (const u of updates) {
         const { error } = await supabase
           .from("settings")
-          .update({ value: u.value })
-          .eq("key", u.key);
+          .upsert({ key: u.key, value: JSON.stringify(u.value) }, { onConflict: "key" });
         if (error) throw error;
       }
     },

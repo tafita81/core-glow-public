@@ -40,8 +40,8 @@ const Index = () => {
     : 0;
   const viralReady = contents?.filter((c) => (c.score ?? 0) >= 85).length ?? 0;
 
-  const competitors = viralIntel?.top_10_ranking_brasil || viralIntel?.competitor_analysis || [];
-  const worldRanking = viralIntel?.world_ranking || [];
+  const topVideosBrasil = viralIntel?.top_10_ranking_brasil || viralIntel?.competitor_analysis || [];
+  const topVideosMundial = viralIntel?.world_ranking || [];
   const monetization = viralIntel?.monetization_insights || {};
   const patterns = viralIntel?.viral_patterns || {};
   const momentum = viralIntel?.momentum_analysis || {};

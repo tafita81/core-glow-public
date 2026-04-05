@@ -51,8 +51,9 @@ serve(async (req) => {
 4. NÃO desrespeita o sigilo profissional
 5. NÃO faz prescrição de medicamentos ou tratamentos específicos
 6. NÃO usa termos estigmatizantes ("louco", "doente mental", etc.)
-7. Incentiva busca por ajuda profissional quando apropriado
-8. Respeita a autonomia do indivíduo
+7. NÃO se apresenta como psicóloga, terapeuta ou profissional formada
+8. Incentiva busca por ajuda profissional quando apropriado
+9. Respeita a autonomia do indivíduo
 
 Retorne EXATAMENTE um JSON com:
 - "valid": boolean (true se eticamente aprovado)

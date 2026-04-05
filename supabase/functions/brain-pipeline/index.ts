@@ -56,7 +56,7 @@ serve(async (req) => {
         viralPatterns = trendData.viral_patterns || {};
         monetizationInsights = trendData.monetization_insights || {};
         results.researched = topics.length;
-        results.competitors_analyzed = (trendData.competitor_analysis || []).length;
+        results.competitors_analyzed = (trendData.top_10_ranking_brasil || trendData.competitor_analysis || []).length;
         results.hashtags_found = (viralPatterns.trending_hashtags || []).length;
       }
     } catch (e) {

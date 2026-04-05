@@ -29,11 +29,18 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um analista de growth hacking e viralização de conteúdo em redes sociais brasileiras, especializado em psicologia, saúde mental e bem-estar.
+            content: `Você é um analista de growth hacking e viralização de conteúdo em redes sociais brasileiras.
 
-Sua missão é fazer engenharia reversa dos vídeos e posts MAIS VIRAIS do momento neste nicho.
+Sua missão é fazer engenharia reversa dos vídeos e posts com MAIS ACESSOS DO MOMENTO em TODO O BRASIL — não se limite a canais específicos.
 
-Analise canais como: Metaforando, Psicólogo Fernando, Ana Beatriz Barbosa, Luana Psicóloga, Morato, Marcos Lacerda (saúde mental), e outros canais de psicologia/autoajuda que estão bombando.
+PESQUISE AMPLAMENTE nas 3 plataformas:
+- INSTAGRAM: Explore/Reels mais vistos, contas com mais crescimento HOJE
+- YOUTUBE: Trending Brasil, Shorts mais vistos, vídeos em alta AGORA
+- TIKTOK: For You Page Brasil, sons trending, vídeos com mais views HOJE
+
+Foque nos nichos: psicologia, saúde mental, autoajuda, desenvolvimento pessoal, neurociência, relacionamentos, comportamento humano.
+
+Rankeie os TOP 10 canais/perfis com mais acessos NO MOMENTO em todo o Brasil nestes nichos, independente de quão conhecidos sejam.
 
 Retorne EXATAMENTE um JSON com esta estrutura:
 {
@@ -46,13 +53,16 @@ Retorne EXATAMENTE um JSON com esta estrutura:
     "cta_patterns": ["tipos de CTA que mais convertem"],
     "hook_first_3_seconds": ["exemplos de ganchos dos primeiros 3 segundos"]
   },
-  "competitor_analysis": [
+  "top_10_ranking_brasil": [
     {
-      "channel": "nome do canal",
+      "rank": 1,
+      "channel": "nome do canal/perfil",
       "platform": "youtube|instagram|tiktok",
-      "why_viral": "razão do sucesso",
+      "followers": "número aproximado",
+      "why_trending_now": "por que está com mais acessos AGORA",
+      "top_video_title": "título do vídeo/post com mais views hoje",
       "content_format": "formato que mais funciona",
-      "posting_frequency": "frequência de postagem"
+      "posting_frequency": "frequência"
     }
   ],
   "topics": [
@@ -82,20 +92,24 @@ Retorne APENAS o JSON, sem markdown.`,
             role: "user",
             content: `Data: ${new Date().toISOString().slice(0, 10)}. Hora: ${new Date().toISOString().slice(11, 16)} UTC.
 
-Faça uma análise PROFUNDA dos vídeos e posts mais virais de psicologia/saúde mental/autoajuda NESTE EXATO MOMENTO no Brasil.
+RANKING BRASIL — Analise o que está com MAIS ACESSOS AGORA nas 3 plataformas:
 
-Considere:
-1. Os 5 vídeos/posts com mais views/likes nas últimas 24h
-2. Quais títulos geraram mais cliques (CTR)
-3. Quais thumbnails convertem mais
-4. Quais ganchos nos primeiros 3 segundos prendem a atenção
-5. Quais hashtags estão trending
-6. Como os maiores canais monetizam
-7. Como eles levam seguidores para comunidades (WhatsApp, Telegram)
-8. Quais tipos de conteúdo geram mais compartilhamentos
+📱 INSTAGRAM:
+- Quais Reels de psicologia/autoajuda estão no Explore com mais views HOJE?
+- Quais perfis estão crescendo mais rápido ESTA SEMANA?
 
-Gere 5 tópicos (não 3) que GARANTAM viralização baseado nos padrões acima.
-Cada tópico deve ter título com gatilho mental (curiosidade, urgência, medo, polêmica controlada).`,
+🎬 YOUTUBE:
+- Quais vídeos de psicologia/comportamento estão no Trending Brasil AGORA?
+- Quais Shorts estão com milhões de views HOJE?
+
+🎵 TIKTOK:
+- Quais vídeos de saúde mental estão na For You Page com mais views?
+- Quais sons/trends estão sendo usados nesse nicho?
+
+RANKEIE os TOP 10 canais/perfis com mais acessos NO MOMENTO — não se prenda aos mesmos de sempre. Descubra novos criadores que estão explodindo.
+
+Gere 5 tópicos com títulos que SUPEREM os mais acessos do momento.
+Cada título deve ser MELHOR que o #1 trending atual.`,
           },
         ],
       }),
@@ -119,12 +133,12 @@ Cada tópico deve ter título com gatilho mental (curiosidade, urgência, medo, 
       analysis = JSON.parse(rawContent);
     } catch {
       console.error("Failed to parse viral analysis:", rawContent);
-      analysis = { topics: [], viral_patterns: {}, competitor_analysis: [], monetization_insights: {} };
+      analysis = { topics: [], viral_patterns: {}, top_10_ranking_brasil: [], monetization_insights: {} };
     }
 
     const topics = analysis.topics || [];
     const viralPatterns = analysis.viral_patterns || {};
-    const competitorAnalysis = analysis.competitor_analysis || [];
+    const competitorAnalysis = analysis.top_10_ranking_brasil || analysis.competitor_analysis || [];
     const monetizationInsights = analysis.monetization_insights || {};
 
     // Save viral intelligence to settings for other functions to use

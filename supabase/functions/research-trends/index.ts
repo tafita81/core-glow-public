@@ -186,7 +186,7 @@ Cada título deve ser MELHOR que o #1 trending atual.`,
       },
     });
 
-    return new Response(JSON.stringify({ topics, viral_patterns: viralPatterns, competitor_analysis: competitorAnalysis, monetization_insights: monetizationInsights }), {
+    return new Response(JSON.stringify({ topics, viral_patterns: viralPatterns, competitor_analysis: competitorAnalysis, world_ranking: worldRanking, monetization_insights: monetizationInsights }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

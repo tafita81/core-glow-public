@@ -114,13 +114,13 @@ const Index = () => {
         </div>
 
         {/* Viral Intelligence Panel */}
-        {(competitors.length > 0 || (monetization.revenue_streams || []).length > 0) && (
+        {(competitors.length > 0 || worldRanking.length > 0 || (monetization.revenue_streams || []).length > 0) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {competitors.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    🏆 Ranking Brasil — Top Canais AGORA
+                    🇧🇷 Ranking Brasil — Top Canais AGORA
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -133,6 +133,34 @@ const Index = () => {
                           {c.followers && <span className="text-muted-foreground ml-1">• {c.followers}</span>}
                         </p>
                         <p className="text-muted-foreground truncate">{c.why_trending_now || c.why_viral}</p>
+                        {c.top_video_title && (
+                          <p className="text-[10px] text-primary/70 truncate">📹 {c.top_video_title}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {worldRanking.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    🌍 Ranking Mundial — Top Canais AGORA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {worldRanking.slice(0, 10).map((c: any, i: number) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span className="font-bold text-primary min-w-[20px]">#{c.rank || i + 1}</span>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {c.channel} <span className="text-muted-foreground">({c.platform})</span>
+                          {c.country && <span className="text-muted-foreground ml-1">• {c.country}</span>}
+                          {c.followers && <span className="text-muted-foreground ml-1">• {c.followers}</span>}
+                        </p>
+                        <p className="text-muted-foreground truncate">{c.why_trending_now}</p>
                         {c.top_video_title && (
                           <p className="text-[10px] text-primary/70 truncate">📹 {c.top_video_title}</p>
                         )}

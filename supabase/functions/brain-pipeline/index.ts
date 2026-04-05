@@ -428,7 +428,7 @@ serve(async (req) => {
 
     await supabase.from("system_logs").insert({
       event_type: "sistema",
-      message: `🧠 Pipeline VIRAL concluído: ${results.researched} pesquisados, ${results.generated} gerados (score médio: ${results.viral_score_avg}), ${results.media} mídias, ${results.validated} validados, ${results.published} publicados, ${results.whatsapp_generated} WhatsApp, ${results.competitors_analyzed} vídeos rastreados, ${(results as any).channels_monitored || 0} canais monitorados, ${(results as any).profiles_optimized || 0} perfis otimizados`,
+      message: `🧠 Pipeline QUÂNTICO concluído (10 etapas): ${results.researched} pesquisados, ${results.generated} gerados (score médio: ${results.viral_score_avg}), ${results.media} mídias, ${results.validated} validados, ${results.published} publicados, ${results.whatsapp_generated} WhatsApp, ${results.competitors_analyzed} vídeos rastreados, ${(results as any).channels_monitored || 0} canais monitorados, ${(results as any).profiles_optimized || 0} perfis otimizados, Saúde: ${(results as any).health_score || 0}/100, Trajetória: ${(results as any).growth_trajectory || "?"}, ${(results as any).cross_adjustments || 0} ajustes cruzados, ${(results as any).content_transmuted || 0} transmutações`,
       level: results.errors.length > 0 ? "warning" : "info",
       metadata: results,
     });

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, TrendingUp, Target, Zap, Users, MessageCircle, Eye, ArrowRight, Sparkles, Clock } from "lucide-react";
+import { Brain, TrendingUp, Target, Zap, Users, MessageCircle, Eye, ArrowRight, Sparkles, Clock, DollarSign } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const Strategy = () => {
   const { data: viralIntel } = useQuery({

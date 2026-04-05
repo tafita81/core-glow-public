@@ -313,6 +313,93 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* EXTERNAL APIs */}
+        <Card className="border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-heading text-lg flex items-center gap-2">
+              🔑 APIs Externas (Vídeo & Áudio)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Chaves para geração de vídeos com avatares realistas e áudio de alta qualidade.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              {
+                id: "heygen",
+                name: "HeyGen",
+                emoji: "🎬",
+                settingsKey: "heygen_api_key",
+                placeholder: "Cole sua HeyGen API Key",
+                help: "Obtenha em app.heygen.com → Settings → API Keys. Gera avatares hiper-realistas com lip sync.",
+              },
+              {
+                id: "elevenlabs",
+                name: "ElevenLabs",
+                emoji: "🎙️",
+                settingsKey: "elevenlabs_api_key",
+                placeholder: "Cole sua ElevenLabs API Key",
+                help: "Obtenha em elevenlabs.io → Profile → API Keys. Gera vozes ultra-realistas.",
+              },
+            ].map((api) => {
+              const currentVal = apiKeys[api.id] || "";
+              const isSaved = !!savedApiKeys[api.id];
+              const isApiVisible = showApiKeys[api.id];
+
+              return (
+                <Card key={api.id} className={isSaved ? "border-green-500/30" : "border-muted"}>
+                  <CardContent className="px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span>{api.emoji}</span>
+                        <span className="font-heading font-medium text-sm">{api.name}</span>
+                        {isSaved ? (
+                          <Badge variant="outline" className="text-[10px] text-green-400 border-green-500/30">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Configurada
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                            <XCircle className="h-3 w-3 mr-1" /> Não configurada
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => setShowApiKeys((prev) => ({ ...prev, [api.id]: !prev[api.id] }))}
+                      >
+                        {isApiVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                    <Input
+                      type={isApiVisible ? "text" : "password"}
+                      placeholder={api.placeholder}
+                      value={currentVal}
+                      onChange={(e) => setApiKeys((prev) => ({ ...prev, [api.id]: e.target.value }))}
+                      className="h-8 text-xs"
+                    />
+                    <p className="text-[9px] text-muted-foreground">{api.help}</p>
+                    <Button
+                      size="sm"
+                      className="w-full h-8 text-xs"
+                      onClick={() => saveApiKey(api.id, api.settingsKey)}
+                      disabled={savingApiKey === api.id || !currentVal.trim()}
+                    >
+                      {savingApiKey === api.id ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3 mr-1" />
+                      )}
+                      Salvar {api.name}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+
         {/* Pipeline config */}
         <Card>
           <CardHeader className="pb-3">

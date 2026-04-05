@@ -224,16 +224,16 @@ const Index = () => {
           </div>
         )}
         {/* Momentum Analysis */}
-        {(momentum.fastest_growing_topic || (momentum.emerging_trends || []).length > 0) && (
+        {(momentum.hottest_video_now || momentum.fastest_growing_topic || (momentum.emerging_trends || momentum.emerging_videos || []).length > 0) && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">⚡ Análise de Momentum em Tempo Real</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {momentum.fastest_growing_topic && (
+              {(momentum.hottest_video_now || momentum.fastest_growing_topic) && (
                 <div className="text-xs">
-                  <span className="font-medium text-success">🚀 Tema com maior aceleração:</span>{" "}
-                  <span>{momentum.fastest_growing_topic}</span>
+                  <span className="font-medium text-success">🚀 Vídeo mais quente agora:</span>{" "}
+                  <span>{momentum.hottest_video_now || momentum.fastest_growing_topic}</span>
                 </div>
               )}
               {momentum.best_time_to_post && (

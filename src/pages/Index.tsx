@@ -56,11 +56,29 @@ const Index = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="font-heading text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Visão geral do sistema autônomo
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-heading text-2xl font-bold">Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Visão geral do sistema autônomo
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px]">Cron: a cada 6h</Badge>
+            <Button
+              size="sm"
+              className="bg-gradient-primary text-primary-foreground"
+              onClick={() => pipelineMutation.mutate()}
+              disabled={pipelineMutation.isPending}
+            >
+              {pipelineMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <PlayCircle className="h-4 w-4 mr-1" />
+              )}
+              {pipelineMutation.isPending ? "Rodando..." : "Rodar Pipeline"}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

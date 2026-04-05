@@ -7,7 +7,8 @@ import { TopicsRanking } from "@/components/TopicsRanking";
 import { PendingActions } from "@/components/PendingActions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Zap, TrendingUp, Target, Users, DollarSign } from "lucide-react";
+import { Eye, Zap, TrendingUp, Target, Users, DollarSign, Lightbulb } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,6 +61,21 @@ const Index = () => {
             🔥 Modo Viral Ativo
           </Badge>
         </div>
+
+        <Link to="/strategy">
+          <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20 hover:border-primary/40 transition-all cursor-pointer group">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                <Lightbulb className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-heading text-sm font-semibold">Entenda a Estratégia do Cérebro</h3>
+                <p className="text-[11px] text-muted-foreground">Veja como cada etapa funciona em tempo real — explicação simples e didática</p>
+              </div>
+              <TrendingUp className="h-4 w-4 text-primary group-hover:translate-x-1 transition-transform shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
 
         <PendingActions />
 

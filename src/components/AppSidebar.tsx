@@ -8,6 +8,7 @@ import {
   Zap,
   ChevronLeft,
   MessageCircle,
+  Lightbulb,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -26,6 +27,7 @@ import {
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Estratégia", url: "/strategy", icon: Lightbulb },
   { title: "Conteúdo", url: "/content", icon: FileText },
   { title: "Comunidade", url: "/community", icon: MessageCircle },
   { title: "Canais", url: "/channels", icon: Share2 },

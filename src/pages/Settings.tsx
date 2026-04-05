@@ -61,6 +61,10 @@ export default function SettingsPage() {
   const [tokenValues, setTokenValues] = useState<Record<string, Record<string, string>>>({});
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
   const [savingTokens, setSavingTokens] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [savedApiKeys, setSavedApiKeys] = useState<Record<string, boolean>>({});
+  const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
+  const [savingApiKey, setSavingApiKey] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

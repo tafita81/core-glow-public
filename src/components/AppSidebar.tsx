@@ -27,6 +27,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Conteúdo", url: "/content", icon: FileText },
+  { title: "Comunidade", url: "/community", icon: MessageCircle },
   { title: "Canais", url: "/channels", icon: Share2 },
   { title: "Logs", url: "/logs", icon: ScrollText },
   { title: "Configurações", url: "/settings", icon: Settings },

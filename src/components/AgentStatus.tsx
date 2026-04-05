@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Brain,
   FileText,
@@ -9,15 +8,16 @@ import {
   Youtube,
   MessageCircle,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const agents = [
-  { name: "Brain Agent", icon: Brain, status: "active", lastRun: "3 min atrás" },
-  { name: "Content Agent", icon: FileText, status: "active", lastRun: "5 min atrás" },
-  { name: "Science Agent", icon: FlaskConical, status: "active", lastRun: "5 min atrás" },
-  { name: "Ethics Agent", icon: Shield, status: "active", lastRun: "5 min atrás" },
-  { name: "Instagram", icon: Instagram, status: "waiting", lastRun: "1h atrás" },
-  { name: "YouTube", icon: Youtube, status: "active", lastRun: "2h atrás" },
-  { name: "WhatsApp", icon: MessageCircle, status: "inactive", lastRun: "Desativado" },
+const agentDefs = [
+  { name: "Brain Agent", icon: Brain, eventType: "sistema" },
+  { name: "Content Agent", icon: FileText, eventType: "geracao" },
+  { name: "Science Agent", icon: FlaskConical, eventType: "validacao" },
+  { name: "Ethics Agent", icon: Shield, eventType: "validacao" },
+  { name: "Instagram", icon: Instagram, eventType: "publicacao" },
+  { name: "YouTube", icon: Youtube, eventType: "publicacao" },
 ];
 
 const statusConfig = {
@@ -26,7 +26,41 @@ const statusConfig = {
   inactive: { label: "Inativo", color: "bg-muted-foreground" },
 };
 
+function timeAgo(date: string) {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins} min atrás`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h atrás`;
+  return `${Math.floor(hrs / 24)}d atrás`;
+}
+
 export function AgentStatus() {
+  const { data: logs } = useQuery({
+    queryKey: ["agent-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 30000,
+  });
+
+  const agents = agentDefs.map((agent) => {
+    const lastLog = logs?.find((l) => l.event_type === agent.eventType);
+    const hasRecent = lastLog && (Date.now() - new Date(lastLog.created_at).getTime()) < 3600000;
+    return {
+      ...agent,
+      status: hasRecent ? "active" : lastLog ? "waiting" : "inactive",
+      lastRun: lastLog ? timeAgo(lastLog.created_at) : "Sem atividade",
+    };
+  });
+
   return (
     <Card className="animate-fade-in">
       <CardHeader className="pb-3">

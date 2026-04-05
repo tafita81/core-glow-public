@@ -120,11 +120,38 @@ export default function ContentPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tipo</label>
+                <Select value={contentType} onValueChange={setContentType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo de conteúdo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="carrossel">Carrossel</SelectItem>
+                    <SelectItem value="reel">Reel</SelectItem>
+                    <SelectItem value="story">Story</SelectItem>
+                    <SelectItem value="artigo">Artigo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Textarea placeholder="Instruções adicionais (opcional)..." className="min-h-[80px]" />
-            <Button className="bg-gradient-primary text-primary-foreground">
-              <Brain className="h-4 w-4 mr-2" />
-              Gerar com IA
+            <Textarea
+              placeholder="Instruções adicionais (opcional)..."
+              className="min-h-[80px]"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+            <Button
+              className="bg-gradient-primary text-primary-foreground"
+              onClick={() => generateMutation.mutate()}
+              disabled={!topic || !channel || generateMutation.isPending}
+            >
+              {generateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Brain className="h-4 w-4 mr-2" />
+              )}
+              {generateMutation.isPending ? "Gerando..." : "Gerar com IA"}
             </Button>
           </CardContent>
         </Card>

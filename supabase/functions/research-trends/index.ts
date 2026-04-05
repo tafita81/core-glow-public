@@ -213,11 +213,11 @@ Gere 5 tópicos INSPIRADOS nos VÍDEOS com mais views, incluindo "inspired_by_vi
     // Log the research
     await supabase.from("system_logs").insert({
       event_type: "pesquisa",
-      message: `Análise viral: ${topics.length} tópicos, ${competitorAnalysis.length} concorrentes analisados, ${(viralPatterns.trending_hashtags || []).length} hashtags trending`,
+      message: `Análise viral: ${topics.length} tópicos, ${competitorAnalysis.length} vídeos rankeados, ${(viralPatterns.trending_hashtags || []).length} hashtags trending`,
       level: "info",
       metadata: {
         topics_count: topics.length,
-        competitors: competitorAnalysis.map((c: any) => c.channel),
+        top_videos: competitorAnalysis.map((c: any) => c.video_title || c.channel),
         top_hashtags: (viralPatterns.trending_hashtags || []).slice(0, 5),
         monetization_streams: monetizationInsights.revenue_streams,
         date: new Date().toISOString(),

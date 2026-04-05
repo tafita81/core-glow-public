@@ -52,6 +52,22 @@ const Strategy = () => {
     },
   });
 
+  const { data: channels } = useQuery({
+    queryKey: ["channels-real"],
+    queryFn: async () => {
+      const { data } = await supabase.from("channels").select("*").order("created_at");
+      return data;
+    },
+  });
+
+  const { data: whatsappGroups } = useQuery({
+    queryKey: ["whatsapp-groups-strategy"],
+    queryFn: async () => {
+      const { data } = await supabase.from("whatsapp_groups").select("*");
+      return data;
+    },
+  });
+
   const momentum = viralIntel?.momentum_analysis || {};
   const patterns = viralIntel?.viral_patterns || {};
   const monetization = viralIntel?.monetization_insights || {};
@@ -63,6 +79,21 @@ const Strategy = () => {
   const avgScore = totalContents
     ? Math.round(contentStats!.reduce((a: number, b: any) => a + (b.score || 0), 0) / totalContents)
     : 0;
+
+  // Real channel data
+  const igChannel = channels?.find((c: any) => c.platform === "instagram");
+  const ytChannel = channels?.find((c: any) => c.platform === "youtube");
+  const tkChannel = channels?.find((c: any) => c.platform === "tiktok");
+  const waChannel = channels?.find((c: any) => c.platform === "whatsapp");
+
+  const igFollowers = igChannel?.followers || 0;
+  const ytFollowers = ytChannel?.followers || 0;
+  const tkFollowers = tkChannel?.followers || 0;
+  const igEngagement = igChannel?.engagement_rate || 0;
+  const ytEngagement = ytChannel?.engagement_rate || 0;
+  const igPosts = igChannel?.posts_count || 0;
+  const ytPosts = ytChannel?.posts_count || 0;
+  const waTotalMembers = whatsappGroups?.reduce((a: number, g: any) => a + (g.members_count || 0), 0) || 0;
 
   const steps = [
     {

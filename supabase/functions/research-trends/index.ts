@@ -89,20 +89,24 @@ Retorne APENAS o JSON, sem markdown.`,
             role: "user",
             content: `Data: ${new Date().toISOString().slice(0, 10)}. Hora: ${new Date().toISOString().slice(11, 16)} UTC.
 
-Faça uma análise PROFUNDA dos vídeos e posts mais virais de psicologia/saúde mental/autoajuda NESTE EXATO MOMENTO no Brasil.
+RANKING BRASIL — Analise o que está com MAIS ACESSOS AGORA nas 3 plataformas:
 
-Considere:
-1. Os 5 vídeos/posts com mais views/likes nas últimas 24h
-2. Quais títulos geraram mais cliques (CTR)
-3. Quais thumbnails convertem mais
-4. Quais ganchos nos primeiros 3 segundos prendem a atenção
-5. Quais hashtags estão trending
-6. Como os maiores canais monetizam
-7. Como eles levam seguidores para comunidades (WhatsApp, Telegram)
-8. Quais tipos de conteúdo geram mais compartilhamentos
+📱 INSTAGRAM:
+- Quais Reels de psicologia/autoajuda estão no Explore com mais views HOJE?
+- Quais perfis estão crescendo mais rápido ESTA SEMANA?
 
-Gere 5 tópicos (não 3) que GARANTAM viralização baseado nos padrões acima.
-Cada tópico deve ter título com gatilho mental (curiosidade, urgência, medo, polêmica controlada).`,
+🎬 YOUTUBE:
+- Quais vídeos de psicologia/comportamento estão no Trending Brasil AGORA?
+- Quais Shorts estão com milhões de views HOJE?
+
+🎵 TIKTOK:
+- Quais vídeos de saúde mental estão na For You Page com mais views?
+- Quais sons/trends estão sendo usados nesse nicho?
+
+RANKEIE os TOP 10 canais/perfis com mais acessos NO MOMENTO — não se prenda aos mesmos de sempre. Descubra novos criadores que estão explodindo.
+
+Gere 5 tópicos com títulos que SUPEREM os mais acessos do momento.
+Cada título deve ser MELHOR que o #1 trending atual.`,
           },
         ],
       }),

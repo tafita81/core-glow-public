@@ -14,7 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      channels: {
+        Row: {
+          created_at: string
+          engagement_rate: number | null
+          followers: number | null
+          id: string
+          is_connected: boolean | null
+          last_post_at: string | null
+          name: string
+          platform: string
+          posts_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          engagement_rate?: number | null
+          followers?: number | null
+          id?: string
+          is_connected?: boolean | null
+          last_post_at?: string | null
+          name: string
+          platform: string
+          posts_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          engagement_rate?: number | null
+          followers?: number | null
+          id?: string
+          is_connected?: boolean | null
+          last_post_at?: string | null
+          name?: string
+          platform?: string
+          posts_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contents: {
+        Row: {
+          body: string | null
+          channel: string | null
+          content_type: string
+          created_at: string
+          ethics_valid: boolean | null
+          id: string
+          published_at: string | null
+          scientific_valid: boolean | null
+          score: number | null
+          status: string
+          title: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          channel?: string | null
+          content_type?: string
+          created_at?: string
+          ethics_valid?: boolean | null
+          id?: string
+          published_at?: string | null
+          scientific_valid?: boolean | null
+          score?: number | null
+          status?: string
+          title: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          channel?: string | null
+          content_type?: string
+          created_at?: string
+          ethics_valid?: boolean | null
+          id?: string
+          published_at?: string | null
+          scientific_valid?: boolean | null
+          score?: number | null
+          status?: string
+          title?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

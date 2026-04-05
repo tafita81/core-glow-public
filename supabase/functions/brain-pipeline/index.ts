@@ -196,6 +196,24 @@ serve(async (req) => {
       }
     }
 
+    // STEP 2.5: ANALYZE VIRAL VISUALS — Extract thumbnail/video patterns from top videos
+    try {
+      const visualRes = await fetch(`${supabaseUrl}/functions/v1/analyze-viral-visuals`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (visualRes.ok) {
+        await supabase.from("system_logs").insert({
+          event_type: "analise_visual",
+          message: "🎨 Análise visual de thumbnails/vídeos virais integrada ao pipeline",
+          level: "info",
+        });
+      }
+    } catch (e) {
+      results.errors.push(`Análise visual: ${e instanceof Error ? e.message : "erro"}`);
+    }
+
     // STEP 3: GENERATE VIRAL MEDIA — Thumbnails + narration optimized for clicks
     for (const contentId of contentIds) {
       try {
@@ -204,7 +222,17 @@ serve(async (req) => {
           headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({ content_id: contentId }),
         });
-        if (mediaRes.ok) results.media++;
+        if (mediaRes.ok) {
+          results.media++;
+          // Also try to generate HeyGen video with lip sync
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/generate-video-heygen`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ content_id: contentId }),
+            });
+          } catch (_) { /* HeyGen is optional — continues if API key not set */ }
+        }
       } catch (e) {
         results.errors.push(`Mídia ${contentId}: ${e instanceof Error ? e.message : "erro"}`);
       }

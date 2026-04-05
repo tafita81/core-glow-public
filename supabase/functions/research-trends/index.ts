@@ -65,6 +65,19 @@ Retorne EXATAMENTE um JSON com esta estrutura:
       "posting_frequency": "frequência"
     }
   ],
+  "top_10_ranking_mundial": [
+    {
+      "rank": 1,
+      "channel": "nome do canal/perfil",
+      "platform": "youtube|instagram|tiktok",
+      "country": "país de origem",
+      "followers": "número aproximado",
+      "why_trending_now": "por que está com mais acessos AGORA no mundo",
+      "top_video_title": "título do vídeo/post com mais views hoje",
+      "content_format": "formato que mais funciona",
+      "language": "idioma principal"
+    }
+  ],
   "topics": [
     {
       "topic": "slug-sem-acento",
@@ -106,9 +119,14 @@ RANKING BRASIL — Analise o que está com MAIS ACESSOS AGORA nas 3 plataformas:
 - Quais vídeos de saúde mental estão na For You Page com mais views?
 - Quais sons/trends estão sendo usados nesse nicho?
 
-RANKEIE os TOP 10 canais/perfis com mais acessos NO MOMENTO — não se prenda aos mesmos de sempre. Descubra novos criadores que estão explodindo.
+RANKEIE os TOP 10 canais/perfis com mais acessos NO MOMENTO no Brasil.
 
-Gere 5 tópicos com títulos que SUPEREM os mais acessos do momento.
+🌍 RANKING MUNDIAL — Analise TAMBÉM os TOP 10 canais/perfis de psicologia, saúde mental, autoajuda e desenvolvimento pessoal com MAIS ACESSOS NO MUNDO INTEIRO:
+- Inclua criadores dos EUA, UK, Espanha, Índia, Alemanha, etc.
+- Canais como Psych2Go, Einzelgänger, Therapy in a Nutshell, etc. — mas descubra quem está EXPLODINDO AGORA
+- Foque em quem tem mais views HOJE, não apenas os maiores em seguidores
+
+Gere 5 tópicos com títulos que SUPEREM os mais acessos do momento (Brasil + Mundo).
 Cada título deve ser MELHOR que o #1 trending atual.`,
           },
         ],
@@ -133,12 +151,13 @@ Cada título deve ser MELHOR que o #1 trending atual.`,
       analysis = JSON.parse(rawContent);
     } catch {
       console.error("Failed to parse viral analysis:", rawContent);
-      analysis = { topics: [], viral_patterns: {}, top_10_ranking_brasil: [], monetization_insights: {} };
+      analysis = { topics: [], viral_patterns: {}, top_10_ranking_brasil: [], top_10_ranking_mundial: [], monetization_insights: {} };
     }
 
     const topics = analysis.topics || [];
     const viralPatterns = analysis.viral_patterns || {};
     const competitorAnalysis = analysis.top_10_ranking_brasil || analysis.competitor_analysis || [];
+    const worldRanking = analysis.top_10_ranking_mundial || [];
     const monetizationInsights = analysis.monetization_insights || {};
 
     // Save viral intelligence to settings for other functions to use
@@ -147,6 +166,7 @@ Cada título deve ser MELHOR que o #1 trending atual.`,
       value: {
         viral_patterns: viralPatterns,
         competitor_analysis: competitorAnalysis,
+        world_ranking: worldRanking,
         monetization_insights: monetizationInsights,
         updated_at: new Date().toISOString(),
       },
@@ -166,7 +186,7 @@ Cada título deve ser MELHOR que o #1 trending atual.`,
       },
     });
 
-    return new Response(JSON.stringify({ topics, viral_patterns: viralPatterns, competitor_analysis: competitorAnalysis, monetization_insights: monetizationInsights }), {
+    return new Response(JSON.stringify({ topics, viral_patterns: viralPatterns, competitor_analysis: competitorAnalysis, world_ranking: worldRanking, monetization_insights: monetizationInsights }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

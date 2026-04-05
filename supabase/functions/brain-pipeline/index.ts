@@ -17,7 +17,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Log pipeline start
     await supabase.from("system_logs").insert({
       event_type: "sistema",
       message: "Pipeline autônomo iniciado",
@@ -34,17 +33,14 @@ serve(async (req) => {
     const autoPublish = settings.auto_publish === true || settings.auto_publish === "true";
     const scoreThreshold = Number(settings.score_threshold) || 75;
 
-    const results = { researched: 0, generated: 0, validated: 0, published: 0, errors: [] as string[] };
+    const results = { researched: 0, generated: 0, media: 0, validated: 0, published: 0, errors: [] as string[] };
 
     // STEP 1: Research trends
     let topics: Array<{ topic: string; label: string; suggested_type: string; suggested_channel: string }> = [];
     try {
       const trendRes = await fetch(`${supabaseUrl}/functions/v1/research-trends`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${supabaseKey}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
         body: "{}",
       });
       if (trendRes.ok) {
@@ -56,16 +52,13 @@ serve(async (req) => {
       results.errors.push(`Pesquisa: ${e instanceof Error ? e.message : "erro"}`);
     }
 
-    // STEP 2: Generate content for each topic (limit to 2 per run)
+    // STEP 2: Generate content (limit 2 per run)
     const contentIds: string[] = [];
     for (const topic of topics.slice(0, 2)) {
       try {
         const genRes = await fetch(`${supabaseUrl}/functions/v1/generate-content`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${supabaseKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             topic: topic.topic,
             channel: topic.suggested_channel || "instagram",
@@ -84,42 +77,46 @@ serve(async (req) => {
       }
     }
 
-    // STEP 3: Validate each generated content
+    // STEP 3: Generate media (images + audio) for each content
     for (const contentId of contentIds) {
       try {
-        // Science validation
+        const mediaRes = await fetch(`${supabaseUrl}/functions/v1/generate-media`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ content_id: contentId }),
+        });
+        if (mediaRes.ok) results.media++;
+      } catch (e) {
+        results.errors.push(`Mídia ${contentId}: ${e instanceof Error ? e.message : "erro"}`);
+      }
+    }
+
+    // STEP 4: Validate each content
+    for (const contentId of contentIds) {
+      try {
         if (scienceCheck) {
           await fetch(`${supabaseUrl}/functions/v1/validate-science`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({ content_id: contentId }),
           });
         }
-
-        // Ethics validation
         if (ethicsCheck) {
           await fetch(`${supabaseUrl}/functions/v1/validate-ethics`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({ content_id: contentId }),
           });
         }
-
         results.validated++;
       } catch (e) {
         results.errors.push(`Validação ${contentId}: ${e instanceof Error ? e.message : "erro"}`);
       }
     }
 
-    // STEP 4: Auto-publish if enabled — publish to real social media
+    // STEP 5: Auto-publish
     if (autoPublish) {
-      // First approve high-score content
+      // Approve high-score validated content
       const { data: toApprove } = await supabase
         .from("contents")
         .select("*")
@@ -132,7 +129,7 @@ serve(async (req) => {
         await supabase.from("contents").update({ status: "aprovado" }).eq("id", content.id);
       }
 
-      // Then publish approved content to social media
+      // Publish approved content to social media
       const { data: approved } = await supabase
         .from("contents")
         .select("*")
@@ -143,21 +140,16 @@ serve(async (req) => {
 
       for (const content of approved || []) {
         try {
-          // Call publish-social to send to all connected platforms
           const pubRes = await fetch(`${supabaseUrl}/functions/v1/publish-social`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({ content_id: content.id }),
           });
-
           if (pubRes.ok) {
             results.published++;
             await supabase.from("system_logs").insert({
               event_type: "publicacao",
-              message: `Auto-publicado em redes sociais: "${content.title}"`,
+              message: `Auto-publicado: "${content.title}"`,
               level: "info",
               metadata: { content_id: content.id, score: content.score },
             });
@@ -168,10 +160,9 @@ serve(async (req) => {
       }
     }
 
-    // Log pipeline completion
     await supabase.from("system_logs").insert({
       event_type: "sistema",
-      message: `Pipeline concluído: ${results.researched} pesquisados, ${results.generated} gerados, ${results.validated} validados, ${results.published} publicados`,
+      message: `Pipeline concluído: ${results.researched} pesquisados, ${results.generated} gerados, ${results.media} mídias, ${results.validated} validados, ${results.published} publicados`,
       level: results.errors.length > 0 ? "warning" : "info",
       metadata: results,
     });

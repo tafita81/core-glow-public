@@ -4,9 +4,12 @@ import { ContentQueue } from "@/components/ContentQueue";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { AgentStatus } from "@/components/AgentStatus";
 import { TopicsRanking } from "@/components/TopicsRanking";
-import { Eye, Heart, Share2, Users, Zap, TrendingUp } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Zap, TrendingUp, PlayCircle, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { data: contents } = useQuery({

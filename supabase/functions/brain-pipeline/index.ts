@@ -235,7 +235,7 @@ serve(async (req) => {
 
     await supabase.from("system_logs").insert({
       event_type: "sistema",
-      message: `🧠 Pipeline VIRAL concluído: ${results.researched} pesquisados, ${results.generated} gerados (score médio: ${results.viral_score_avg}), ${results.media} mídias, ${results.validated} validados, ${results.published} publicados, ${results.competitors_analyzed} concorrentes analisados`,
+      message: `🧠 Pipeline VIRAL concluído: ${results.researched} pesquisados, ${results.generated} gerados (score médio: ${results.viral_score_avg}), ${results.media} mídias, ${results.validated} validados, ${results.published} publicados, ${results.whatsapp_generated} WhatsApp, ${results.competitors_analyzed} concorrentes`,
       level: results.errors.length > 0 ? "warning" : "info",
       metadata: results,
     });

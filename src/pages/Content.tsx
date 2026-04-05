@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Brain, Sparkles, FlaskConical, Shield, Loader2 } from "lucide-react";
+import { Brain, Sparkles, FlaskConical, Shield, Loader2, Image, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,16 +27,13 @@ export default function ContentPage() {
       if (data?.error) throw new Error(data.error);
       const content = data.content;
 
-      // Auto-validate with science and ethics
       if (content?.id) {
+        toast({ title: "🎨 Gerando mídia..." });
+        await supabase.functions.invoke("generate-media", { body: { content_id: content.id } });
         toast({ title: "🔬 Validando cientificamente..." });
-        await supabase.functions.invoke("validate-science", {
-          body: { content_id: content.id },
-        });
+        await supabase.functions.invoke("validate-science", { body: { content_id: content.id } });
         toast({ title: "⚖️ Validando eticamente..." });
-        await supabase.functions.invoke("validate-ethics", {
-          body: { content_id: content.id },
-        });
+        await supabase.functions.invoke("validate-ethics", { body: { content_id: content.id } });
       }
 
       return content;
@@ -45,7 +42,7 @@ export default function ContentPage() {
       queryClient.invalidateQueries({ queryKey: ["contents"] });
       queryClient.invalidateQueries({ queryKey: ["contents-queue"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-contents"] });
-      toast({ title: "✨ Conteúdo gerado e validado!", description: "Passou por validação científica e ética." });
+      toast({ title: "✨ Conteúdo gerado com mídia e validado!" });
       setTopic("");
       setChannel("");
       setInstructions("");
@@ -67,7 +64,6 @@ export default function ContentPage() {
     },
   });
 
-
   const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
     rascunho: { label: "Rascunho", variant: "secondary" },
     revisao: { label: "Em Revisão", variant: "outline" },
@@ -82,7 +78,7 @@ export default function ContentPage() {
         <div>
           <h1 className="font-heading text-2xl font-bold">Geração de Conteúdo</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gere, valide e aprove conteúdo automaticamente
+            Gere conteúdo com imagem, narração e validação automática
           </p>
         </div>
 
@@ -98,9 +94,7 @@ export default function ContentPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tema</label>
                 <Select value={topic} onValueChange={setTopic}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um tema" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione um tema" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ansiedade">Ansiedade</SelectItem>
                     <SelectItem value="relacionamentos">Relacionamentos</SelectItem>
@@ -108,30 +102,30 @@ export default function ContentPage() {
                     <SelectItem value="autoestima">Autoestima</SelectItem>
                     <SelectItem value="burnout">Burnout</SelectItem>
                     <SelectItem value="inteligencia-emocional">Inteligência Emocional</SelectItem>
+                    <SelectItem value="parentalidade">Parentalidade Consciente</SelectItem>
+                    <SelectItem value="luto">Luto e Perdas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Canal</label>
                 <Select value={channel} onValueChange={setChannel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o canal" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione o canal" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="instagram">Instagram</SelectItem>
                     <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tipo</label>
                 <Select value={contentType} onValueChange={setContentType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tipo de conteúdo" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Tipo de conteúdo" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="carrossel">Carrossel</SelectItem>
-                    <SelectItem value="reel">Reel</SelectItem>
+                    <SelectItem value="reel">Reel / Vídeo Curto</SelectItem>
                     <SelectItem value="story">Story</SelectItem>
                     <SelectItem value="artigo">Artigo</SelectItem>
                   </SelectContent>
@@ -154,7 +148,7 @@ export default function ContentPage() {
               ) : (
                 <Brain className="h-4 w-4 mr-2" />
               )}
-              {generateMutation.isPending ? "Gerando..." : "Gerar com IA"}
+              {generateMutation.isPending ? "Gerando conteúdo + mídia..." : "Gerar com IA"}
             </Button>
           </CardContent>
         </Card>
@@ -168,6 +162,8 @@ export default function ContentPage() {
           ) : (
             contents?.map((item) => {
               const status = statusMap[item.status] || statusMap.rascunho;
+              const thumbUrl = (item as any).thumbnail_url;
+              const audioUrl = (item as any).audio_url;
               return (
                 <Card key={item.id} className="hover:glow-primary transition-shadow">
                   <CardContent className="p-5 space-y-4">
@@ -183,11 +179,20 @@ export default function ContentPage() {
                         </span>
                       </div>
                     </div>
+
+                    {/* Thumbnail */}
+                    {thumbUrl && (
+                      <div className="rounded-lg overflow-hidden border">
+                        <img src={thumbUrl} alt={item.title} className="w-full h-48 object-cover" />
+                      </div>
+                    )}
+
                     {item.body && (
                       <div className="rounded-lg bg-muted/50 p-4">
                         <pre className="text-sm whitespace-pre-wrap font-sans">{item.body}</pre>
                       </div>
                     )}
+
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-1.5">
                         <FlaskConical className={`h-4 w-4 ${item.scientific_valid ? "text-success" : "text-destructive"}`} />
@@ -197,17 +202,35 @@ export default function ContentPage() {
                         <Shield className={`h-4 w-4 ${item.ethics_valid ? "text-success" : "text-destructive"}`} />
                         <span className="text-xs">Ética {item.ethics_valid ? "✓" : "✗"}</span>
                       </div>
-                      {item.status === "publicado" && (
+                      {thumbUrl && (
+                        <div className="flex items-center gap-1.5">
+                          <Image className="h-4 w-4 text-success" />
+                          <span className="text-xs">Imagem ✓</span>
+                        </div>
+                      )}
+                      {audioUrl && (
+                        <div className="flex items-center gap-1.5">
+                          <Volume2 className="h-4 w-4 text-success" />
+                          <span className="text-xs">Narração ✓</span>
+                        </div>
+                      )}
+                      {item.status === "publicado" ? (
                         <Badge variant="default" className="ml-auto text-[10px]">
                           ✅ Publicado automaticamente
                         </Badge>
-                      )}
-                      {item.status !== "publicado" && (
+                      ) : (
                         <Badge variant="outline" className="ml-auto text-[10px]">
                           ⏳ Aguardando pipeline automático
                         </Badge>
                       )}
                     </div>
+
+                    {/* Audio player */}
+                    {audioUrl && (
+                      <audio controls className="w-full h-8" src={audioUrl}>
+                        Seu navegador não suporta áudio.
+                      </audio>
+                    )}
                   </CardContent>
                 </Card>
               );

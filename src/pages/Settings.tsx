@@ -1,13 +1,12 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Key, Brain, Shield, Save, Loader2 } from "lucide-react";
+import { Brain, Shield, Save, Loader2, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,30 +90,15 @@ export default function SettingsPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="font-heading text-lg flex items-center gap-2">
-              <Key className="h-5 w-5 text-primary" />
-              API Keys
+              <Clock className="h-5 w-5 text-primary" />
+              Pipeline Automático
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>OpenAI API Key</Label>
-              <Input type="password" placeholder="sk-..." />
-            </div>
-            <div className="space-y-2">
-              <Label>Instagram Token</Label>
-              <Input type="password" placeholder="Token de acesso..." />
-            </div>
-            <div className="space-y-2">
-              <Label>Instagram Page ID</Label>
-              <Input placeholder="ID da página..." />
-            </div>
-            <div className="space-y-2">
-              <Label>YouTube API Key</Label>
-              <Input type="password" placeholder="API Key..." />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              As chaves são armazenadas de forma segura como variáveis de ambiente.
+          <CardContent className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              O pipeline roda automaticamente a cada 6 horas (4x/dia), pesquisando tendências, gerando conteúdo com imagem e narração, validando e publicando nas redes conectadas.
             </p>
+            <Badge variant="outline" className="text-xs">🟢 Cron ativo — a cada 6h</Badge>
           </CardContent>
         </Card>
 
@@ -130,7 +114,7 @@ export default function SettingsPage() {
               <div>
                 <Label>Publicação Automática</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Publicar automaticamente conteúdo aprovado
+                  Publicar automaticamente conteúdo aprovado nas redes sociais
                 </p>
               </div>
               <Switch checked={autoPublish} onCheckedChange={setAutoPublish} />
@@ -141,15 +125,9 @@ export default function SettingsPage() {
                 <Label>Score Mínimo para Publicação</Label>
                 <Badge variant="outline">{scoreThreshold[0]}</Badge>
               </div>
-              <Slider
-                value={scoreThreshold}
-                onValueChange={setScoreThreshold}
-                min={0}
-                max={100}
-                step={5}
-              />
+              <Slider value={scoreThreshold} onValueChange={setScoreThreshold} min={0} max={100} step={5} />
               <p className="text-xs text-muted-foreground">
-                Conteúdo com score abaixo de {scoreThreshold[0]} será enviado para revisão manual.
+                Conteúdo com score abaixo de {scoreThreshold[0]} será enviado para revisão.
               </p>
             </div>
           </CardContent>
@@ -166,19 +144,15 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <Label>Validação Científica</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Verificar referências em periódicos
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Verificar referências científicas</p>
               </div>
               <Switch checked={scienceCheck} onCheckedChange={setScienceCheck} />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <Label>Filtro Ético (CRP)</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Bloquear conteúdo com termos proibidos
-                </p>
+                <Label>Filtro Ético</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Bloquear conteúdo com termos proibidos</p>
               </div>
               <Switch checked={ethicsCheck} onCheckedChange={setEthicsCheck} />
             </div>
@@ -190,11 +164,7 @@ export default function SettingsPage() {
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending}
         >
-          {saveMutation.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
+          {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           Salvar Configurações
         </Button>
       </div>

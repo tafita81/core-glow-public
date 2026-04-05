@@ -8,6 +8,7 @@ import {
   Zap,
   ChevronLeft,
   MessageCircle,
+  Lightbulb,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";

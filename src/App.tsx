@@ -9,6 +9,7 @@ import Channels from "./pages/Channels.tsx";
 import Logs from "./pages/Logs.tsx";
 import Settings from "./pages/Settings.tsx";
 import Community from "./pages/Community.tsx";
+import Strategy from "./pages/Strategy.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();

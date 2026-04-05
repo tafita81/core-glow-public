@@ -5,8 +5,25 @@ import { PerformanceChart } from "@/components/PerformanceChart";
 import { AgentStatus } from "@/components/AgentStatus";
 import { TopicsRanking } from "@/components/TopicsRanking";
 import { Eye, Heart, Share2, Users, Zap, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const { data: contents } = useQuery({
+    queryKey: ["dashboard-contents"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("contents").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const published = contents?.filter((c) => c.status === "publicado").length ?? 0;
+  const pending = contents?.filter((c) => c.status !== "publicado" && c.status !== "rejeitado").length ?? 0;
+  const avgScore = contents?.length
+    ? Math.round(contents.reduce((a, b) => a + (b.score ?? 0), 0) / contents.length)
+    : 0;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -19,52 +36,28 @@ const Index = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <MetricCard
-            title="Views Totais"
-            value="14.950"
-            change="+23% vs semana anterior"
-            changeType="positive"
+            title="Conteúdos Gerados"
+            value={String(contents?.length ?? 0)}
+            change="Total no sistema"
+            changeType="neutral"
             icon={Eye}
             iconColor="bg-primary/10 text-primary"
           />
           <MetricCard
-            title="Saves"
-            value="1.002"
-            change="+15% vs semana anterior"
+            title="Publicados"
+            value={String(published)}
+            change={`${pending} pendentes`}
             changeType="positive"
-            icon={Heart}
-            iconColor="bg-accent/10 text-accent"
-          />
-          <MetricCard
-            title="Compartilhamentos"
-            value="425"
-            change="+8% vs semana anterior"
-            changeType="positive"
-            icon={Share2}
-            iconColor="bg-info/10 text-info"
-          />
-          <MetricCard
-            title="Leads Gerados"
-            value="47"
-            change="+31% vs semana anterior"
-            changeType="positive"
-            icon={Users}
+            icon={Zap}
             iconColor="bg-success/10 text-success"
           />
           <MetricCard
             title="Score Médio"
-            value="82.4"
-            change="+5 pontos"
-            changeType="positive"
+            value={String(avgScore)}
+            change={avgScore >= 75 ? "Acima do mínimo" : "Abaixo do mínimo"}
+            changeType={avgScore >= 75 ? "positive" : "negative"}
             icon={TrendingUp}
             iconColor="bg-warning/10 text-warning"
-          />
-          <MetricCard
-            title="Posts Publicados"
-            value="18"
-            change="3 pendentes"
-            changeType="neutral"
-            icon={Zap}
-            iconColor="bg-primary/10 text-primary"
           />
         </div>
 

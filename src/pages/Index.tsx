@@ -40,7 +40,7 @@ const Index = () => {
     : 0;
   const viralReady = contents?.filter((c) => (c.score ?? 0) >= 85).length ?? 0;
 
-  const competitors = viralIntel?.competitor_analysis || [];
+  const competitors = viralIntel?.top_10_ranking_brasil || viralIntel?.competitor_analysis || [];
   const monetization = viralIntel?.monetization_insights || {};
   const patterns = viralIntel?.viral_patterns || {};
 

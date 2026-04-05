@@ -138,7 +138,7 @@ Cada título deve ser MELHOR que o #1 trending atual.`,
 
     const topics = analysis.topics || [];
     const viralPatterns = analysis.viral_patterns || {};
-    const competitorAnalysis = analysis.competitor_analysis || [];
+    const competitorAnalysis = analysis.top_10_ranking_brasil || analysis.competitor_analysis || [];
     const monetizationInsights = analysis.monetization_insights || {};
 
     // Save viral intelligence to settings for other functions to use

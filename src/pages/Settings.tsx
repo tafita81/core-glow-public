@@ -132,6 +132,42 @@ export default function SettingsPage() {
     }
   }, [existingTokens, channels]);
 
+  // Load existing API keys from settings
+  useEffect(() => {
+    if (settings) {
+      const heygenKey = settings.find((s) => s.key === "heygen_api_key")?.value;
+      const elevenKey = settings.find((s) => s.key === "elevenlabs_api_key")?.value;
+      const saved: Record<string, boolean> = {};
+      const vals: Record<string, string> = {};
+      if (heygenKey && typeof heygenKey === "string" && heygenKey.length > 0) {
+        saved.heygen = true;
+        vals.heygen = heygenKey;
+      }
+      if (elevenKey && typeof elevenKey === "string" && elevenKey.length > 0) {
+        saved.elevenlabs = true;
+        vals.elevenlabs = elevenKey;
+      }
+      setSavedApiKeys(saved);
+      setApiKeys((prev) => ({ ...vals, ...prev }));
+    }
+  }, [settings]);
+
+  const saveApiKey = async (apiId: string, settingsKey: string) => {
+    setSavingApiKey(apiId);
+    try {
+      const value = apiKeys[apiId]?.trim();
+      if (!value) return;
+      await supabase.from("settings").upsert({ key: settingsKey, value: JSON.stringify(value) }, { onConflict: "key" });
+      setSavedApiKeys((prev) => ({ ...prev, [apiId]: true }));
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast({ title: "✅ API Key salva!", description: "Será usada automaticamente na próxima geração." });
+    } catch {
+      toast({ title: "Erro ao salvar API Key", variant: "destructive" });
+    } finally {
+      setSavingApiKey(null);
+    }
+  };
+
   const hasTokensForPlatform = (platformId: string) => {
     const platformFields = PLATFORMS.find((p) => p.id === platformId)?.fields || [];
     const vals = tokenValues[platformId] || {};

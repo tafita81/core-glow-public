@@ -212,6 +212,31 @@ serve(async (req) => {
             result = await publishToWhatsApp(accessToken, phoneId, content);
             break;
           }
+          case "pinterest": {
+            const boardId = tokens.find((t: any) => t.token_type === "board_id")?.token_value;
+            if (!boardId) { results.push({ platform: "pinterest", success: false, error: "Board ID não configurado" }); continue; }
+            result = await publishToPinterest(accessToken, boardId, content);
+            break;
+          }
+          case "facebook": {
+            const pageId = tokens.find((t: any) => t.token_type === "page_id")?.token_value;
+            if (!pageId) { results.push({ platform: "facebook", success: false, error: "Page ID não configurado" }); continue; }
+            result = await publishToFacebook(accessToken, pageId, content);
+            break;
+          }
+          case "linkedin": {
+            const personId = tokens.find((t: any) => t.token_type === "person_id")?.token_value;
+            if (!personId) { results.push({ platform: "linkedin", success: false, error: "Person ID não configurado" }); continue; }
+            result = await publishToLinkedIn(accessToken, personId, content);
+            break;
+          }
+          case "twitter": {
+            const apiKey = tokens.find((t: any) => t.token_type === "api_key")?.token_value || "";
+            const apiSecret = tokens.find((t: any) => t.token_type === "api_secret")?.token_value || "";
+            const accessSecret = tokens.find((t: any) => t.token_type === "access_secret")?.token_value || "";
+            result = await publishToTwitter(apiKey, apiSecret, accessToken, accessSecret, content);
+            break;
+          }
           default:
             result = { platform: ch.platform, success: false, error: "Plataforma não suportada" };
         }

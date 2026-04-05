@@ -41,6 +41,7 @@ const Index = () => {
   const viralReady = contents?.filter((c) => (c.score ?? 0) >= 85).length ?? 0;
 
   const competitors = viralIntel?.top_10_ranking_brasil || viralIntel?.competitor_analysis || [];
+  const worldRanking = viralIntel?.world_ranking || [];
   const monetization = viralIntel?.monetization_insights || {};
   const patterns = viralIntel?.viral_patterns || {};
 

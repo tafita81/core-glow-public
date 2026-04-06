@@ -172,46 +172,15 @@ async function fetchGoogleTrends(): Promise<string[]> {
 
 async function fetchYouTubeTrending(apiKey: string, regionCode: string): Promise<any[]> {
   try {
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=${regionCode}&maxResults=25&key=${apiKey}`;
+    // Get 50 trending (max allowed) for broader coverage
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&chart=mostPopular&regionCode=${regionCode}&maxResults=50&key=${apiKey}`;
     const res = await fetch(url);
     if (!res.ok) {
       console.log(`YouTube API ${res.status} for ${regionCode}`);
       return [];
     }
     const data = await res.json();
-    const now = Date.now();
-    return (data.items || []).map((item: any) => {
-      const rawViews = parseInt(item.statistics?.viewCount || "0");
-      const likes = parseInt(item.statistics?.likeCount || "0");
-      const comments = parseInt(item.statistics?.commentCount || "0");
-      const publishedAt = item.snippet?.publishedAt;
-      const ageMs = now - new Date(publishedAt || now).getTime();
-      const ageDays = Math.max(1, ageMs / 86400000);
-      const viewsPerDay = Math.round(rawViews / ageDays);
-      const engagementRate = rawViews > 0 ? (likes + comments) / rawViews : 0;
-      const engMultiplier = 1 + Math.min(1, engagementRate * 20);
-      const viralScore = Math.round(viewsPerDay * engMultiplier);
-
-      return {
-        video_title: item.snippet?.title || "",
-        description: item.snippet?.description || "",
-        channel_title: item.snippet?.channelTitle || "",
-        video_url: `https://www.youtube.com/watch?v=${item.id}`,
-        creator: item.snippet?.channelTitle || "",
-        creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,
-        total_views: formatViews(item.statistics?.viewCount),
-        raw_views: rawViews,
-        likes,
-        comments,
-        platform: "youtube",
-        region: regionCode,
-        published_at: publishedAt,
-        age_days: Math.round(ageDays),
-        views_per_day: viewsPerDay,
-        engagement_rate: Math.round(engagementRate * 10000) / 100,
-        viral_score: viralScore,
-      };
-    });
+    return (data.items || []).map((item: any) => enrichVideoData(item, regionCode));
   } catch (e) {
     console.error(`YouTube API error for ${regionCode}:`, e);
     return [];
@@ -222,14 +191,16 @@ async function searchYouTubeNiche(apiKey: string, query: string, daysBack = 14):
   try {
     const q = encodeURIComponent(query);
     // order=viewCount + recent period = explosive new videos
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&order=viewCount&publishedAfter=${getDateDaysAgo(daysBack)}&maxResults=20&key=${apiKey}`;
+    // maxResults=25 for broader coverage
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&order=viewCount&publishedAfter=${getDateDaysAgo(daysBack)}&maxResults=25&key=${apiKey}`;
     const res = await fetch(searchUrl);
     if (!res.ok) return [];
     const data = await res.json();
     const videoIds = (data.items || []).map((item: any) => item.id?.videoId).filter(Boolean);
     if (videoIds.length === 0) return [];
 
-    const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds.join(",")}&key=${apiKey}`;
+    // contentDetails gives us video duration (for monetization scoring)
+    const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoIds.join(",")}&key=${apiKey}`;
     const statsRes = await fetch(statsUrl);
     if (!statsRes.ok) {
       return (data.items || []).map((item: any) => ({
@@ -242,52 +213,160 @@ async function searchYouTubeNiche(apiKey: string, query: string, daysBack = 14):
       }));
     }
     const statsData = await statsRes.json();
-    const now = Date.now();
     return (statsData.items || [])
-      .map((item: any) => {
-        const rawViews = parseInt(item.statistics?.viewCount || "0");
-        const likes = parseInt(item.statistics?.likeCount || "0");
-        const comments = parseInt(item.statistics?.commentCount || "0");
-        const publishedAt = item.snippet?.publishedAt;
-        
-        // Calculate age in days and views/day velocity
-        const ageMs = now - new Date(publishedAt || now).getTime();
-        const ageDays = Math.max(1, ageMs / 86400000);
-        const viewsPerDay = Math.round(rawViews / ageDays);
-        
-        // Engagement rate: (likes + comments) / views — higher = more followers potential
-        const engagementRate = rawViews > 0 ? (likes + comments) / rawViews : 0;
-        // Engagement multiplier: 1.0 (baseline) up to 2.0 (exceptional engagement)
-        const engMultiplier = 1 + Math.min(1, engagementRate * 20);
-        
-        // VIRAL SCORE = views/day × engagement multiplier
-        // This prioritizes FAST-GROWING videos that also convert to followers
-        const viralScore = Math.round(viewsPerDay * engMultiplier);
-        
-        return {
-          video_title: item.snippet?.title || "",
-          description: item.snippet?.description || "",
-          channel_title: item.snippet?.channelTitle || "",
-          video_url: `https://www.youtube.com/watch?v=${item.id}`,
-          creator: item.snippet?.channelTitle || "",
-          creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,
-          total_views: formatViews(item.statistics?.viewCount),
-          raw_views: rawViews,
-          likes,
-          comments,
-          platform: "youtube",
-          published_at: publishedAt,
-          age_days: Math.round(ageDays),
-          views_per_day: viewsPerDay,
-          engagement_rate: Math.round(engagementRate * 10000) / 100, // percentage
-          viral_score: viralScore,
-        };
-      })
-      .filter((v: any) => v.raw_views >= 500000); // 500K+ views minimum
+      .map((item: any) => enrichVideoData(item))
+      .filter((v: any) => v.raw_views >= 100000); // 100K minimum pre-filter (final filter is stricter)
   } catch (e) {
     console.error("YouTube search error:", e);
     return [];
   }
+}
+
+// ========================
+// VIRAL SCORE ALGORITHM v3 — MAXIMUM MONETIZATION + ENGAGEMENT
+// ========================
+// Formula: viral_score = (views_per_day ^ 1.15) × freshness_bonus × engagement_multiplier × monetization_multiplier
+//
+// FRESHNESS BONUS (newer = more opportunity to ride the wave):
+//   1-3 days old  → 2.5x  (EXPLOSIVE — maximum opportunity, content is HOT right now)
+//   4-7 days old  → 1.8x  (VERY HOT — still growing, proven viral)
+//   8-14 days old → 1.3x  (WARM — established viral, good for adaptation)
+//   15-30 days old → 1.0x (BASELINE — still relevant but wave is passing)
+//   30+ days old  → 0.6x  (COLD — wave passed, only if exceptionally high views)
+//
+// ENGAGEMENT MULTIPLIER (higher engagement = more followers conversion):
+//   Based on weighted engagement: comments × 3 + likes × 1 (comments are 3x more valuable)
+//   Comments indicate deeper audience connection → more followers
+//   Range: 1.0 to 2.5x
+//
+// MONETIZATION MULTIPLIER (content that generates more revenue):
+//   Video duration 8-20 min → 1.5x (mid-roll ads possible, ideal length)
+//   Video duration 3-8 min → 1.2x (good for engagement, 1 ad)
+//   Shorts < 60s → 0.8x (low ad revenue but high follower growth)
+//   20+ min → 1.3x (multiple mid-rolls but lower completion rate)
+//
+// SUBSCRIBER POTENTIAL (channels that convert viewers to subscribers):
+//   High engagement + medium channel size = highest conversion
+//   Very large channels (10M+) = lower conversion (audience already saturated)
+//
+// CPM TIER BONUS (psychology/mental health = premium advertiser niche):
+//   Applied as base 1.3x for all psychology content (high-CPM niche)
+
+function parseDuration(iso8601: string | undefined): number {
+  if (!iso8601) return 0;
+  const match = iso8601.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  return (parseInt(match[1] || "0") * 3600) + (parseInt(match[2] || "0") * 60) + parseInt(match[3] || "0");
+}
+
+function enrichVideoData(item: any, regionCode?: string): any {
+  const now = Date.now();
+  const rawViews = parseInt(item.statistics?.viewCount || "0");
+  const likes = parseInt(item.statistics?.likeCount || "0");
+  const comments = parseInt(item.statistics?.commentCount || "0");
+  const publishedAt = item.snippet?.publishedAt;
+  const durationSec = parseDuration(item.contentDetails?.duration);
+  const durationMin = durationSec / 60;
+
+  // Age calculation
+  const ageMs = now - new Date(publishedAt || now).getTime();
+  const ageDays = Math.max(0.5, ageMs / 86400000); // minimum half a day
+  const viewsPerDay = Math.round(rawViews / ageDays);
+
+  // ===== FRESHNESS BONUS =====
+  let freshnessBonus = 0.6;
+  if (ageDays <= 3) freshnessBonus = 2.5;
+  else if (ageDays <= 7) freshnessBonus = 1.8;
+  else if (ageDays <= 14) freshnessBonus = 1.3;
+  else if (ageDays <= 30) freshnessBonus = 1.0;
+
+  // ===== ENGAGEMENT MULTIPLIER =====
+  // Comments are 3x more valuable than likes (deeper connection, algorithm boost)
+  const weightedEngagement = rawViews > 0 ? ((comments * 3) + likes) / rawViews : 0;
+  const engMultiplier = 1 + Math.min(1.5, weightedEngagement * 25);
+
+  // Comment-to-view ratio (key metric for follower conversion)
+  const commentRate = rawViews > 0 ? (comments / rawViews) * 100 : 0;
+  // Like-to-view ratio
+  const likeRate = rawViews > 0 ? (likes / rawViews) * 100 : 0;
+
+  // ===== MONETIZATION MULTIPLIER =====
+  let monetizationMultiplier = 1.0;
+  if (durationMin >= 8 && durationMin <= 20) monetizationMultiplier = 1.5; // Sweet spot: mid-roll ads
+  else if (durationMin >= 3 && durationMin < 8) monetizationMultiplier = 1.2;
+  else if (durationMin > 20) monetizationMultiplier = 1.3;
+  else if (durationMin > 0 && durationMin < 1) monetizationMultiplier = 0.8; // Shorts
+
+  // Duration label
+  let durationLabel = "";
+  if (durationMin > 0) {
+    if (durationMin < 1) durationLabel = `${Math.round(durationSec)}s (Short)`;
+    else if (durationMin < 60) durationLabel = `${Math.round(durationMin)}min`;
+    else durationLabel = `${Math.floor(durationMin / 60)}h${Math.round(durationMin % 60)}min`;
+  }
+
+  // ===== CPM TIER BONUS (psychology = premium niche) =====
+  const cpmBonus = 1.3;
+
+  // ===== FINAL VIRAL SCORE =====
+  const viralScore = Math.round(
+    Math.pow(viewsPerDay, 1.15) * freshnessBonus * engMultiplier * monetizationMultiplier * cpmBonus
+  );
+
+  // ===== MONETIZATION POTENTIAL LABEL =====
+  let monetizationPotential = "💰";
+  if (viralScore > 5000000) monetizationPotential = "💎💎💎 JACKPOT";
+  else if (viralScore > 1000000) monetizationPotential = "💎💎 Altíssimo";
+  else if (viralScore > 500000) monetizationPotential = "💎 Alto";
+  else if (viralScore > 100000) monetizationPotential = "💰 Bom";
+  else monetizationPotential = "📈 Moderado";
+
+  // ===== REPLICABILITY ANALYSIS =====
+  const title = (item.snippet?.title || "").toLowerCase();
+  let contentFormat = "desconhecido";
+  if (durationMin > 0 && durationMin < 1) contentFormat = "🎬 Short/Reel";
+  else if (durationMin >= 1 && durationMin < 5) contentFormat = "📱 Vídeo Curto";
+  else if (durationMin >= 5 && durationMin < 15) contentFormat = "🎥 Vídeo Médio";
+  else if (durationMin >= 15) contentFormat = "📺 Vídeo Longo";
+
+  // Hook pattern detection
+  let hookPattern = "";
+  if (title.includes("?")) hookPattern = "❓ Pergunta";
+  else if (title.match(/^\d+|top \d+|🔴|⚠️|nunca|sempre|pare de|stop/i)) hookPattern = "🔥 Comando/Lista";
+  else if (title.match(/secret|segredo|truth|verdade|ninguém|nobody|hidden/i)) hookPattern = "🤫 Segredo/Revelação";
+  else if (title.match(/why|por que|como|how to/i)) hookPattern = "🧠 Educativo";
+  else if (title.match(/fake|lie|mentir|manipulation|manipula/i)) hookPattern = "⚡ Polêmico";
+  else hookPattern = "📌 Declaração";
+
+  return {
+    video_title: item.snippet?.title || "",
+    description: item.snippet?.description || "",
+    channel_title: item.snippet?.channelTitle || "",
+    video_url: `https://www.youtube.com/watch?v=${item.id?.videoId || item.id}`,
+    creator: item.snippet?.channelTitle || "",
+    creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,
+    total_views: formatViews(item.statistics?.viewCount),
+    raw_views: rawViews,
+    likes,
+    comments,
+    platform: "youtube",
+    region: regionCode || "",
+    published_at: publishedAt,
+    // Advanced metrics
+    age_days: Math.round(ageDays * 10) / 10,
+    views_per_day: viewsPerDay,
+    engagement_rate: Math.round((likes + comments) / Math.max(1, rawViews) * 10000) / 100,
+    comment_rate: Math.round(commentRate * 100) / 100,
+    like_rate: Math.round(likeRate * 100) / 100,
+    duration_sec: durationSec,
+    duration_label: durationLabel,
+    content_format: contentFormat,
+    hook_pattern: hookPattern,
+    freshness_bonus: freshnessBonus,
+    monetization_multiplier: monetizationMultiplier,
+    monetization_potential: monetizationPotential,
+    viral_score: viralScore,
+  };
 }
 
 async function fetchRedditTrending(clientId: string, clientSecret: string): Promise<any[]> {
@@ -401,14 +480,14 @@ serve(async (req) => {
     if (youtubeApiKey) {
       const check = await canCallApi(supabase, "youtube", currentHour, forceAll);
       if (check.allowed) {
-        // BRASIL — trending geral + buscas focadas (14 dias, vídeos explosivos)
+        // BRASIL — trending geral + 2 buscas focadas (cobrir máximo de ângulos)
         promises.push(fetchYouTubeTrending(youtubeApiKey, "BR"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia ansiedade depressão autoconhecimento narcisismo terapia", 14));
-        // MUNDIAL — máxima prioridade para adaptação BR
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia narcisismo ansiedade depressão autoconhecimento trauma inteligência emocional", 14));
+        // MUNDIAL — 3 ângulos diferentes para capturar TODOS os vídeos virais
         promises.push(fetchYouTubeTrending(youtubeApiKey, "US"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology anxiety depression narcissist therapy self improvement motivation", 14));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology narcissist anxiety depression therapy dark psychology manipulation emotional intelligence", 14));
         promises.push(fetchYouTubeTrending(youtubeApiKey, "GB"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "mental health emotional intelligence toxic people stoicism mindset", 14));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "mental health motivation stoicism toxic people overthinking self improvement habits procrastination", 14));
         apisCalled.push("youtube");
       } else {
         apisSkipped.push(`youtube (${check.reason})`);
@@ -501,30 +580,52 @@ serve(async (req) => {
 
     console.log(`Data fetched — Called: ${apisCalled.join(",")} | Skipped: ${apisSkipped.join(",") || "none"} | Google: ${googleTrends.length}, YT BR: ${ytBR.length}, YT US: ${ytUS.length}, Reddit: ${redditPosts.length}, News: ${news.length}`);
 
-    // ===== FILTRO DE PSICOLOGIA (restritivo) =====
-    // Termos específicos — evita falsos positivos como "mind-blowing", "brainrot"
+    // ===== FILTRO DE PSICOLOGIA EXPANDIDO =====
+    // Ampliado para capturar TODOS os ângulos que viralizam em psicologia/saúde mental
     const psychExact = [
-      "psicolog", "psycholog", "mental health", "saúde mental", "terapia cognitiv",
-      "therap", "ansiedade", "anxiety disorder", "depressão", "depression",
-      "autoconhecimento", "self improvement", "self-improvement",
-      "narcisis", "narcisist", "trauma psic", "ptsd", "mindfulness",
-      "meditação", "meditation practice", "burnout", "transtorno",
-      "bipolar", "adhd", "tdah", "autismo", "autism spectrum",
-      "toxic relationship", "relacionamento tóxic", "attachment style", "apego",
-      "neurociência", "neuroscience", "cognitive behavior", "comportament",
-      "resiliência", "resilience", "autocuidado", "self-care", "self care",
-      "bem-estar mental", "mental wellbeing", "mental wellness",
-      "psychotherap", "psicotera", "aconselhamento", "counseling",
-      "panic attack", "pânico", "obsessive compulsive", "ocd", "toc",
-      "autoestima", "self-esteem", "self esteem", "emotional intelligence",
-      "inteligência emocional", "emotional regulation", "regulação emocional",
-      "inner child", "criança interior", "shadow work", "sombra",
-      "psychology tips", "dicas de psicologia", "mental health awareness",
-      "saúde emocional", "emotional health", "psychology explained",
-      "psicólogo", "psychologist", "psychiatr", "psiquiatr",
-      "anxiety tips", "overcome depression", "superar depressão",
-      "self development", "desenvolvimento pessoal", "personal development",
-      "stoicism", "estoicismo", "emotional healing", "cura emocional",
+      // Core psychology
+      "psicolog", "psycholog", "mental health", "saúde mental", "terapia",
+      "therap", "ansiedade", "anxiety", "depressão", "depression",
+      // Self-improvement (MAIOR engajamento no YouTube)
+      "autoconhecimento", "self improvement", "self-improvement", "self development",
+      "desenvolvimento pessoal", "personal development", "personal growth",
+      "motivation", "motivação", "discipline", "disciplina", "mindset",
+      "habit", "hábito", "procrastin", "productivity", "produtividade",
+      // Dark psychology & manipulation (VIRAL — milhões de views)
+      "narcisis", "narcisist", "narcissist", "dark psychology", "psicologia sombria",
+      "manipulation", "manipula", "gaslighting", "toxic people", "pessoa tóxica",
+      "sociopath", "psychopath", "psicopata", "emotional abuse", "abuso emocional",
+      "love bombing", "trauma bond", "covert narciss",
+      // Relationships (alto engajamento)
+      "toxic relationship", "relacionamento tóxic", "attachment", "apego",
+      "red flag", "bandeira vermelha", "boundaries", "limites",
+      "people pleaser", "codependen", "breakup", "término",
+      // Emotional intelligence
+      "emotional intelligence", "inteligência emocional", "emotional regulation",
+      "regulação emocional", "emotional healing", "cura emocional",
+      "overthinking", "pensamento excessivo", "rumination", "ruminação",
+      // Trauma & healing
+      "trauma", "ptsd", "inner child", "criança interior", "shadow work",
+      "healing", "cura", "recovery", "recuperação",
+      // Philosophy/Stoicism (VIRAL — milhões de views)
+      "stoicism", "estoicismo", "stoic", "marcus aurelius", "epictetus",
+      "philosophy", "filosofia", "wisdom", "sabedoria",
+      // Neuroscience & brain
+      "neurociência", "neuroscience", "brain", "cérebro", "dopamine", "dopamina",
+      "cognitive", "cognitiv", "neuroplasticity", "neuroplasticidade",
+      // Mindfulness
+      "mindfulness", "meditação", "meditation", "calm", "peace", "paz interior",
+      // Body language (VIRAL)
+      "body language", "linguagem corporal", "microexpress", "lie detection",
+      // Mental disorders (alto CPM)
+      "burnout", "transtorno", "bipolar", "adhd", "tdah", "autismo", "autism",
+      "ocd", "toc", "panic", "pânico", "social anxiety", "ansiedade social",
+      // Self-esteem
+      "autoestima", "self-esteem", "self esteem", "confidence", "confiança",
+      "self worth", "autovalor", "imposter syndrome", "síndrome do impostor",
+      // Success mindset
+      "success", "sucesso", "millionaire mindset", "wealth", "riqueza",
+      "financial freedom", "liberdade financeira", "entrepreneur", "empreendedor",
     ];
 
     function isPsychRelated(video: any): boolean {
@@ -532,56 +633,105 @@ serve(async (req) => {
       const channel = `${video.channel_title || ""}`.toLowerCase();
       const desc = `${video.description || ""}`.toLowerCase();
       
-      // Strong match: keyword in title or channel name → definitely relevant
+      // Strong match: keyword in title or channel name
       const titleMatch = psychExact.some(kw => title.includes(kw) || channel.includes(kw));
       if (titleMatch) return true;
       
-      // Weak match: keyword only in description → need at least 3 different keywords
+      // Weak match: keyword only in description → need at least 2 different keywords
       const descMatches = psychExact.filter(kw => desc.includes(kw));
-      return descMatches.length >= 3;
+      return descMatches.length >= 2;
     }
 
-    // ===== RANKING STRATEGY: MÁXIMA VIRALIZAÇÃO + MONETIZAÇÃO =====
-    // Critério: vídeos NOVOS (últimos 14 dias) que EXPLODIRAM
-    // Ranking por VIRAL SCORE = (views/dia) × engagement_multiplier
-    // Isso encontra vídeos que estão crescendo AGORA — ideal para surfar a onda
-    // Mínimo: 500K views (em 14 dias = crescimento real, não vídeo antigo)
+    // ===== RANKING STRATEGY v3: MÁXIMA VIRALIZAÇÃO + MONETIZAÇÃO + SEGUIDORES =====
+    // Mínimo: 500K views (vídeos que realmente explodiram nos últimos 14 dias)
+    // Ranking: viral_score (views/dia × freshness × engagement × monetização)
+    // Deduplica por video_url
     
-    const MIN_VIEWS = 500000; // 500K — vídeos que realmente explodiram
+    const MIN_VIEWS = 500000;
 
-    // BRASIL — trending + psicologia (ordenado por viral_score)
-    const brRanking = [...ytBR, ...ytNicheBR]
-      .filter(isPsychRelated)
-      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
-      .sort((a: any, b: any) => (b.viral_score || b.raw_views || 0) - (a.viral_score || a.raw_views || 0))
-      .slice(0, 10)
-      .map((v: any, i: number) => ({
+    function deduplicateVideos(videos: any[]): any[] {
+      const seen = new Set<string>();
+      return videos.filter(v => {
+        const key = v.video_url || v.video_title;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function buildRankingEntry(v: any, i: number, region?: string) {
+      const country = region || (v.region ? ({ US: "🇺🇸 EUA", GB: "🇬🇧 Reino Unido", DE: "🇩🇪 Alemanha" } as any)[v.region] || "🌍 Internacional" : "🇧🇷 Brasil");
+      
+      return {
         ...v,
         rank: i + 1,
-        momentum_score: Math.max(50, 95 - i * 5),
-        why_relevant: `🇧🇷 ${v.total_views} • ${formatViews(String(v.views_per_day || 0))}/dia • ${v.age_days || "?"}d • Eng: ${v.engagement_rate || 0}%`,
-      }));
-
-    // MUNDIAL — prioridade máxima, ordenado por viral_score
-    const worldRanking = [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
-      .filter((v: any) => v.region !== "BR")
-      .filter(isPsychRelated)
-      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
-      .sort((a: any, b: any) => (b.viral_score || b.raw_views || 0) - (a.viral_score || a.raw_views || 0))
-      .slice(0, 15)
-      .map((v: any, i: number) => {
-        const regionMap: Record<string, string> = { US: "🇺🇸 EUA", GB: "🇬🇧 Reino Unido", DE: "🇩🇪 Alemanha" };
-        const country = regionMap[v.region] || "🌍 Internacional";
-        return {
-          ...v,
-          rank: i + 1,
-          momentum_score: Math.max(50, 98 - i * 3),
+        momentum_score: v.viral_score ? Math.min(99, Math.round(50 + Math.log10(Math.max(1, v.viral_score)) * 8)) : 50,
+        country,
+        why_relevant: [
           country,
-          why_relevant: `${country} • ${v.total_views} • ${formatViews(String(v.views_per_day || 0))}/dia • ${v.age_days || "?"}d • Eng: ${v.engagement_rate || 0}%`,
-          adaptation_guide: "Traduzir, adaptar culturalmente e focar no gancho emocional para público BR",
-          risk_level: "baixo",
-        };
-      });
+          v.total_views,
+          `${formatViews(String(v.views_per_day || 0))}/dia`,
+          `${v.age_days}d`,
+          `💬${v.comment_rate || 0}%`,
+          `❤️${v.like_rate || 0}%`,
+          v.duration_label || "",
+        ].filter(Boolean).join(" • "),
+        adaptation_guide: region ? "Traduzir, adaptar gancho emocional e formato para público BR" : undefined,
+        risk_level: "baixo",
+      };
+    }
+
+    // BRASIL — trending + psicologia
+    const brRanking = deduplicateVideos(
+      [...ytBR, ...ytNicheBR]
+        .filter(isPsychRelated)
+        .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
+    )
+      .sort((a: any, b: any) => (b.viral_score || 0) - (a.viral_score || 0))
+      .slice(0, 10)
+      .map((v: any, i: number) => buildRankingEntry(v, i));
+
+    // MUNDIAL — prioridade máxima
+    const worldRanking = deduplicateVideos(
+      [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
+        .filter((v: any) => v.region !== "BR")
+        .filter(isPsychRelated)
+        .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
+    )
+      .sort((a: any, b: any) => (b.viral_score || 0) - (a.viral_score || 0))
+      .slice(0, 15)
+      .map((v: any, i: number) => buildRankingEntry(v, i, undefined));
+
+    // ===== MONETIZATION INTELLIGENCE =====
+    const allRanked = [...worldRanking, ...brRanking];
+    const avgViralScore = allRanked.length > 0 ? Math.round(allRanked.reduce((s, v) => s + (v.viral_score || 0), 0) / allRanked.length) : 0;
+    const topFormats = allRanked.reduce((acc: Record<string, number>, v) => { acc[v.content_format || "?"] = (acc[v.content_format || "?"] || 0) + 1; return acc; }, {});
+    const topHooks = allRanked.reduce((acc: Record<string, number>, v) => { acc[v.hook_pattern || "?"] = (acc[v.hook_pattern || "?"] || 0) + 1; return acc; }, {});
+    const bestFormat = Object.entries(topFormats).sort((a, b) => b[1] - a[1])[0]?.[0] || "?";
+    const bestHook = Object.entries(topHooks).sort((a, b) => b[1] - a[1])[0]?.[0] || "?";
+    const avgDuration = allRanked.length > 0 ? Math.round(allRanked.reduce((s, v) => s + (v.duration_sec || 0), 0) / allRanked.length / 60) : 0;
+
+    const monetizationInsights = {
+      avg_viral_score: avgViralScore,
+      best_format: bestFormat,
+      best_hook_pattern: bestHook,
+      ideal_duration: `${avgDuration} minutos`,
+      top_monetization: allRanked.filter(v => v.monetization_potential?.includes("💎")).length,
+      revenue_streams: [
+        "AdSense (CPM alto: psicologia = $8-15/1000 views)",
+        "Cursos online (converter seguidores em alunos)",
+        "Afiliados Amazon (livros de psicologia/autoajuda)",
+        "Mentoria 1:1 (premium, alto ticket)",
+        "Comunidade WhatsApp (engajamento + indicações)",
+      ],
+      community_growth_tactics: [
+        `Formato mais viral: ${bestFormat}`,
+        `Hook mais eficaz: ${bestHook}`,
+        `Duração ideal: ~${avgDuration}min`,
+        "Postar às 07:00, 12:00 e 19:00 (horários de pico BR)",
+        "Responder TODOS os comentários nas primeiras 2h",
+      ],
+    };
 
     // Save results
     const viralData = {
@@ -590,12 +740,22 @@ serve(async (req) => {
         google_trends: googleTrends,
         best_posting_times: ["07:00-09:00", "12:00-13:00", "19:00-21:00"],
       },
+      monetization_insights: monetizationInsights,
       competitor_analysis: brRanking,
       world_ranking: worldRanking,
       reddit_trending: redditPosts.slice(0, 10),
       news_trending: news.slice(0, 10),
       data_sources: dataSources,
       apis_skipped: apisSkipped,
+      algorithm_version: "v3_max_monetization",
+      ranking_criteria: {
+        formula: "viral_score = (views/dia^1.15) × freshness × engagement × monetization × CPM",
+        min_views: MIN_VIEWS,
+        period: "14 dias",
+        freshness_bonus: "1-3d=2.5x, 4-7d=1.8x, 8-14d=1.3x, 15-30d=1.0x",
+        engagement_weight: "comments×3 + likes×1 (comments = 3x mais valiosos)",
+        monetization_factor: "8-20min=1.5x, 3-8min=1.2x, shorts=0.8x",
+      },
       rate_limits: {
         youtube: { limit: "10.000 units/dia", calls_max: `${API_LIMITS.youtube.daily_calls}/dia`, units_per_call: API_LIMITS.youtube.units_per_call },
         reddit: { limit: "60 req/min", calls_max: `${API_LIMITS.reddit.daily_calls}/dia` },

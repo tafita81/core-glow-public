@@ -5,6 +5,7 @@ import { PerformanceChart } from "@/components/PerformanceChart";
 import { AgentStatus } from "@/components/AgentStatus";
 import { TopicsRanking } from "@/components/TopicsRanking";
 import { PendingActions } from "@/components/PendingActions";
+import { VideoRankingCard } from "@/components/VideoRankingCard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, Zap, TrendingUp, Target, Users, DollarSign, Lightbulb } from "lucide-react";
@@ -49,6 +50,7 @@ const Index = () => {
   const redditTrending = viralIntel?.reddit_trending || [];
   const newsTrending = viralIntel?.news_trending || [];
   const dataSources = viralIntel?.data_sources || [];
+  const rankingCriteria = viralIntel?.ranking_criteria || {};
 
   return (
     <DashboardLayout>
@@ -133,101 +135,61 @@ const Index = () => {
           />
         </div>
 
-        {(topVideosBrasil.length > 0 || topVideosMundial.length > 0 || (monetization.revenue_streams || []).length > 0) && (
+        {(topVideosMundial.length > 0 || topVideosBrasil.length > 0 || (monetization.revenue_streams || []).length > 0) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* MUNDIAL PRIMEIRO — prioridade, menos riscos */}
-            {topVideosMundial.length > 0 && (
-              <Card className="border-primary/30">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    🌍 Top Vídeos Mundial (EUA + Europa) — Psicologia
-                    <Badge variant="secondary" className="text-[9px]">⭐ Prioridade</Badge>
-                  </CardTitle>
-                  <p className="text-[9px] text-muted-foreground">
-                    {viralIntel?.updated_at ? `✅ Dados reais • ${new Date(viralIntel.updated_at).toLocaleString("pt-BR")}` : ""}
-                    {" • Ranking por views do vídeo • Risco baixo"}
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {topVideosMundial.slice(0, 15).map((v: any, i: number) => {
-                    const videoUrl = v.video_url || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.video_title || "")}`;
-                    return (
-                    <div key={i} onClick={() => window.open(videoUrl, "_blank")} className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer group/link">
-                      <span className="font-bold text-primary min-w-[20px]">#{v.rank || i + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <p className="font-medium truncate group-hover/link:text-primary transition-colors">🎬 {v.video_title}</p>
-                          {v.momentum_score && <Badge variant="secondary" className="text-[9px] shrink-0">⚡{v.momentum_score}</Badge>}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {v.creator} • {v.country || v.region} • <span className="text-primary underline font-medium">ver vídeo ↗</span>
-                        </p>
-                        {v.total_views && <p className="text-[10px] text-success font-medium">👁 {v.total_views}</p>}
-                        {v.likes > 0 && <p className="text-[10px] text-muted-foreground">❤️ {v.likes?.toLocaleString()} likes • 💬 {v.comments?.toLocaleString()} comentários</p>}
-                        <p className="text-muted-foreground truncate">{v.why_relevant}</p>
-                        {v.adaptation_guide && <p className="text-[10px] text-warning truncate">🔄 {v.adaptation_guide}</p>}
-                        {v.risk_level && <Badge variant="outline" className="text-[8px] mt-0.5">🛡️ Risco: {v.risk_level}</Badge>}
-                      </div>
-                    </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* BRASIL — segundo */}
-            {topVideosBrasil.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    🇧🇷 Top Vídeos Brasil — Psicologia & Trending
-                  </CardTitle>
-                  <p className="text-[9px] text-muted-foreground">
-                    {viralIntel?.updated_at ? `✅ Dados reais • ${new Date(viralIntel.updated_at).toLocaleString("pt-BR")}` : ""}
-                    {" • Ranking por views do vídeo"}
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {topVideosBrasil.slice(0, 10).map((v: any, i: number) => {
-                    const videoUrl = v.video_url || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.video_title || "")}`;
-                    return (
-                    <div key={i} onClick={() => window.open(videoUrl, "_blank")} className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer group/link">
-                      <span className="font-bold text-primary min-w-[20px]">#{v.rank || i + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <p className="font-medium truncate group-hover/link:text-primary transition-colors">🎬 {v.video_title}</p>
-                          {v.momentum_score && <Badge variant="secondary" className="text-[9px] shrink-0">⚡{v.momentum_score}</Badge>}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {v.creator} • <span className="text-primary underline font-medium">ver vídeo ↗</span>
-                        </p>
-                        {v.total_views && <p className="text-[10px] text-success font-medium">👁 {v.total_views}</p>}
-                        {v.likes > 0 && <p className="text-[10px] text-muted-foreground">❤️ {v.likes?.toLocaleString()} likes • 💬 {v.comments?.toLocaleString()} comentários</p>}
-                        <p className="text-muted-foreground truncate">{v.why_relevant}</p>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
-
-
+            <VideoRankingCard
+              title="🌍 Top Vídeos Mundial — Psicologia"
+              priorityBadge="⭐ Prioridade"
+              videos={topVideosMundial}
+              maxVideos={15}
+              updatedAt={viralIntel?.updated_at}
+              rankingInfo={rankingCriteria}
+            />
+            <VideoRankingCard
+              title="🇧🇷 Top Vídeos Brasil — Psicologia"
+              videos={topVideosBrasil}
+              maxVideos={10}
+              updatedAt={viralIntel?.updated_at}
+              rankingInfo={rankingCriteria}
+            />
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   💰 Estratégias de Monetização
+                  {monetization.avg_viral_score > 0 && (
+                    <Badge variant="secondary" className="text-[9px]">
+                      Viral Score Médio: {monetization.avg_viral_score > 1000000 ? `${(monetization.avg_viral_score / 1000000).toFixed(1)}M` : monetization.avg_viral_score > 1000 ? `${(monetization.avg_viral_score / 1000).toFixed(0)}K` : monetization.avg_viral_score}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {(monetization.revenue_streams || []).slice(0, 4).map((stream: string, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
+                {monetization.best_format && (
+                  <div className="flex items-center gap-2 text-xs bg-primary/5 rounded-md p-2">
+                    <span>🏆</span>
+                    <span className="font-medium">Formato mais viral: {monetization.best_format}</span>
+                  </div>
+                )}
+                {monetization.best_hook_pattern && (
+                  <div className="flex items-center gap-2 text-xs bg-primary/5 rounded-md p-2">
+                    <span>🎯</span>
+                    <span className="font-medium">Hook mais eficaz: {monetization.best_hook_pattern}</span>
+                  </div>
+                )}
+                {monetization.ideal_duration && (
+                  <div className="flex items-center gap-2 text-xs bg-primary/5 rounded-md p-2">
+                    <span>⏳</span>
+                    <span className="font-medium">Duração ideal: {monetization.ideal_duration}</span>
+                  </div>
+                )}
+                {(monetization.revenue_streams || []).map((stream: string, i: number) => (
+                  <div key={`rev-${i}`} className="flex items-center gap-2 text-xs">
                     <span className="text-success">💵</span>
                     <span>{stream}</span>
                   </div>
                 ))}
-                {(monetization.community_growth_tactics || []).slice(0, 3).map((tactic: string, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
+                {(monetization.community_growth_tactics || []).map((tactic: string, i: number) => (
+                  <div key={`tac-${i}`} className="flex items-center gap-2 text-xs">
                     <span>📈</span>
                     <span>{tactic}</span>
                   </div>

@@ -10,6 +10,7 @@ import Logs from "./pages/Logs.tsx";
 import Settings from "./pages/Settings.tsx";
 import Community from "./pages/Community.tsx";
 import Strategy from "./pages/Strategy.tsx";
+import Monitoring from "./pages/Monitoring.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();

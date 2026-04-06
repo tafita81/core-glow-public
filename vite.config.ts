@@ -5,12 +5,14 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: '/core-glow-public/',
   server: {
     host: "::",
     port: 8080,
     hmr: {
       overlay: false,
     },
+    cors: true,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

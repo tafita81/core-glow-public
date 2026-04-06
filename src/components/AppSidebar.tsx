@@ -28,6 +28,7 @@ import {
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Monitoramento", url: "/monitoring", icon: BarChart3 },
   { title: "Estratégia", url: "/strategy", icon: Lightbulb },
   { title: "Conteúdo", url: "/content", icon: FileText },
   { title: "Comunidade", url: "/community", icon: MessageCircle },

@@ -29,6 +29,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/community" element={<Community />} />
           <Route path="/strategy" element={<Strategy />} />
+          <Route path="/monitoring" element={<Monitoring />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

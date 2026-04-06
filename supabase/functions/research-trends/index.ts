@@ -125,7 +125,9 @@ Retorne EXATAMENTE um JSON com esta estrutura:
     {
       "rank": 1,
       "video_title": "TÍTULO EXATO do vídeo",
+      "video_url": "URL DIRETA do vídeo (ex: https://www.youtube.com/watch?v=XXXXX ou https://www.instagram.com/reel/XXXXX ou https://www.tiktok.com/@user/video/XXXXX)",
       "creator": "nome do criador",
+      "creator_url": "URL do perfil do criador",
       "platform": "youtube|instagram|tiktok",
       "total_views": "ex: 15M views",
       "views_growth_1h": "ex: +2.3M views na última hora",
@@ -143,8 +145,10 @@ Retorne EXATAMENTE um JSON com esta estrutura:
     {
       "rank": 1,
       "video_title": "TÍTULO TRADUZIDO para PT-BR",
+      "video_url": "URL DIRETA do vídeo original",
       "original_title": "título original no idioma de origem",
       "creator": "nome",
+      "creator_url": "URL do perfil do criador",
       "platform": "youtube|instagram|tiktok",
       "country": "país (em português)",
       "total_views": "ex: 80M views",

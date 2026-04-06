@@ -141,9 +141,21 @@ const Index = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {topVideosBrasil.slice(0, 10).map((v: any, i: number) => {
-                    const videoUrl = v.video_url || v.url || (v.platform === "youtube" ? `https://www.youtube.com/results?search_query=${encodeURIComponent(v.video_title || v.top_video_title || "")}` : v.platform === "instagram" ? `https://www.instagram.com/explore/tags/${encodeURIComponent((v.video_title || "").split(" ")[0])}` : v.platform === "tiktok" ? `https://www.tiktok.com/search?q=${encodeURIComponent(v.video_title || "")}` : v.platform === "pinterest" ? `https://br.pinterest.com/search/pins/?q=${encodeURIComponent(v.video_title || "")}` : "#");
+                    const buildSearchUrl = (title: string, platform: string, creator?: string) => {
+                      const q = encodeURIComponent(`${title} ${creator || ""}`.trim());
+                      if (platform === "youtube") return `https://www.youtube.com/results?search_query=${q}`;
+                      if (platform === "instagram") return `https://www.instagram.com/${creator?.replace(/^@/, "") || "explore"}`;
+                      if (platform === "tiktok") return `https://www.tiktok.com/search?q=${q}`;
+                      if (platform === "pinterest") return `https://br.pinterest.com/search/pins/?q=${q}`;
+                      return `https://www.google.com/search?q=${q}`;
+                    };
+                    const videoUrl = v.video_url || v.url || buildSearchUrl(v.video_title || v.top_video_title || "", v.platform, v.creator);
                     return (
-                    <a key={i} href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors group/link">
+                    <div
+                      key={i}
+                      onClick={() => window.open(videoUrl, "_blank")}
+                      className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer group/link"
+                    >
                       <span className="font-bold text-primary min-w-[20px]">#{v.rank || i + 1}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
@@ -157,7 +169,7 @@ const Index = () => {
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {v.creator || v.channel} • {v.platform} • <span className="text-primary/60 underline">abrir ↗</span>
+                          {v.creator || v.channel} • {v.platform} • <span className="text-primary underline font-medium">ver vídeo ↗</span>
                         </p>
                         {v.total_views && (
                           <p className="text-[10px] text-success font-medium">👁 {v.total_views}</p>
@@ -170,7 +182,7 @@ const Index = () => {
                           <p className="text-[10px] text-primary/70 truncate">🔁 {v.replication_strategy}</p>
                         )}
                       </div>
-                    </a>
+                    </div>
                     );
                   })}
                 </CardContent>
@@ -186,9 +198,21 @@ const Index = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {topVideosMundial.slice(0, 10).map((v: any, i: number) => {
-                    const videoUrl = v.video_url || v.url || (v.platform === "youtube" ? `https://www.youtube.com/results?search_query=${encodeURIComponent(v.original_title || v.video_title || "")}` : v.platform === "instagram" ? `https://www.instagram.com/explore/tags/${encodeURIComponent((v.original_title || v.video_title || "").split(" ")[0])}` : v.platform === "tiktok" ? `https://www.tiktok.com/search?q=${encodeURIComponent(v.original_title || v.video_title || "")}` : v.platform === "pinterest" ? `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(v.original_title || v.video_title || "")}` : "#");
+                    const buildSearchUrl = (title: string, platform: string, creator?: string) => {
+                      const q = encodeURIComponent(`${title} ${creator || ""}`.trim());
+                      if (platform === "youtube") return `https://www.youtube.com/results?search_query=${q}`;
+                      if (platform === "instagram") return `https://www.instagram.com/${creator?.replace(/^@/, "") || "explore"}`;
+                      if (platform === "tiktok") return `https://www.tiktok.com/search?q=${q}`;
+                      if (platform === "pinterest") return `https://www.pinterest.com/search/pins/?q=${q}`;
+                      return `https://www.google.com/search?q=${q}`;
+                    };
+                    const videoUrl = v.video_url || v.url || buildSearchUrl(v.original_title || v.video_title || "", v.platform, v.creator);
                     return (
-                    <a key={i} href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors group/link">
+                    <div
+                      key={i}
+                      onClick={() => window.open(videoUrl, "_blank")}
+                      className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer group/link"
+                    >
                       <span className="font-bold text-primary min-w-[20px]">#{v.rank || i + 1}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
@@ -202,7 +226,7 @@ const Index = () => {
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {v.creator || v.channel} • {v.platform} {v.country && `• ${v.country}`} • <span className="text-primary/60 underline">abrir ↗</span>
+                          {v.creator || v.channel} • {v.platform} {v.country && `• ${v.country}`} • <span className="text-primary underline font-medium">ver vídeo ↗</span>
                         </p>
                         {v.total_views && (
                           <p className="text-[10px] text-success font-medium">👁 {v.total_views}</p>
@@ -212,13 +236,13 @@ const Index = () => {
                         )}
                         <p className="text-muted-foreground truncate">{v.why_viral || v.why_growing_fast}</p>
                         {v.adaptation_potential && (
-                          <p className="text-[10px] text-warning truncate">🔄 Potencial adaptação: {v.adaptation_potential}/100 • Risco plágio: {v.plagiarism_risk || "baixo"}</p>
+                          <p className="text-[10px] text-warning truncate">🔄 Adaptação: {v.adaptation_potential}/100 • Risco: {v.plagiarism_risk || "baixo"}</p>
                         )}
                         {v.insight_for_brazil && (
                           <p className="text-[10px] text-success truncate">🇧🇷 {v.insight_for_brazil}</p>
                         )}
                       </div>
-                    </a>
+                    </div>
                     );
                   })}
                 </CardContent>

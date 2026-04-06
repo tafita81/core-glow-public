@@ -523,30 +523,33 @@ serve(async (req) => {
       return descMatches.length >= 3;
     }
 
-    // Build rankings — sorted by VIDEO views, ONLY psychology/mental health
-    // Minimum view thresholds to ensure quality rankings
-    const MIN_VIEWS_BR = 1000000;      // 1M minimum for Brazil
-    const MIN_VIEWS_WORLD = 1000000;   // 1M minimum for World
+    // ===== RANKING STRATEGY: MÁXIMA VIRALIZAÇÃO + MONETIZAÇÃO =====
+    // Critério: vídeos NOVOS (últimos 14 dias) que EXPLODIRAM
+    // Ranking por VIRAL SCORE = (views/dia) × engagement_multiplier
+    // Isso encontra vídeos que estão crescendo AGORA — ideal para surfar a onda
+    // Mínimo: 500K views (em 14 dias = crescimento real, não vídeo antigo)
+    
+    const MIN_VIEWS = 500000; // 500K — vídeos que realmente explodiram
 
-    // BRASIL — trending + psicologia (filtrado + mínimo de views)
+    // BRASIL — trending + psicologia (ordenado por viral_score)
     const brRanking = [...ytBR, ...ytNicheBR]
       .filter(isPsychRelated)
-      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS_BR)
-      .sort((a: any, b: any) => (b.raw_views || 0) - (a.raw_views || 0))
+      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
+      .sort((a: any, b: any) => (b.viral_score || b.raw_views || 0) - (a.viral_score || a.raw_views || 0))
       .slice(0, 10)
       .map((v: any, i: number) => ({
         ...v,
         rank: i + 1,
         momentum_score: Math.max(50, 95 - i * 5),
-        why_relevant: `🇧🇷 ${v.total_views || "N/A"} views`,
+        why_relevant: `🇧🇷 ${v.total_views} • ${formatViews(String(v.views_per_day || 0))}/dia • ${v.age_days || "?"}d • Eng: ${v.engagement_rate || 0}%`,
       }));
 
-    // MUNDIAL (EUA + Europa) — prioridade máxima, FILTRADO psicologia + mínimo de views
+    // MUNDIAL — prioridade máxima, ordenado por viral_score
     const worldRanking = [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
       .filter((v: any) => v.region !== "BR")
       .filter(isPsychRelated)
-      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS_WORLD)
-      .sort((a: any, b: any) => (b.raw_views || 0) - (a.raw_views || 0))
+      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
+      .sort((a: any, b: any) => (b.viral_score || b.raw_views || 0) - (a.viral_score || a.raw_views || 0))
       .slice(0, 15)
       .map((v: any, i: number) => {
         const regionMap: Record<string, string> = { US: "🇺🇸 EUA", GB: "🇬🇧 Reino Unido", DE: "🇩🇪 Alemanha" };
@@ -556,7 +559,7 @@ serve(async (req) => {
           rank: i + 1,
           momentum_score: Math.max(50, 98 - i * 3),
           country,
-          why_relevant: `${country} — ${v.total_views || "N/A"} views`,
+          why_relevant: `${country} • ${v.total_views} • ${formatViews(String(v.views_per_day || 0))}/dia • ${v.age_days || "?"}d • Eng: ${v.engagement_rate || 0}%`,
           adaptation_guide: "Traduzir, adaptar culturalmente e focar no gancho emocional para público BR",
           risk_level: "baixo",
         };

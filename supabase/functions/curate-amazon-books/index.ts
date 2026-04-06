@@ -22,10 +22,7 @@ serve(async (req) => {
 
     // Get Amazon affiliate tag
     const { data: affiliateRow } = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "amazon_affiliate_tag")
-      .single();
+      .from("settings").select("value").eq("key", "amazon_affiliate_tag").single();
     const affiliateTag = (affiliateRow?.value as any)?.tag || "";
 
     if (!affiliateTag) {
@@ -35,42 +32,57 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get viral intelligence for trending topics
+    // Get existing catalog to GROW it (never replace, only add)
+    const { data: existingCatalogRow } = await supabase
+      .from("settings").select("value").eq("key", "amazon_book_catalog").single();
+    const existingCatalog = (existingCatalogRow?.value as any) || {};
+    const existingBooks = existingCatalog.catalog || [];
+
+    // Get viral intelligence
     const { data: viralRow } = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "viral_intelligence")
-      .single();
+      .from("settings").select("value").eq("key", "viral_intelligence").single();
     const viralIntel = (viralRow?.value as any) || {};
 
-    // Get brain learnings for what topics perform best
+    // Get brain learnings
     const { data: learningsRow } = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "brain_learnings")
-      .single();
+      .from("settings").select("value").eq("key", "brain_learnings").single();
     const learnings = (learningsRow?.value as any) || {};
 
-    // Get recent WhatsApp content to understand conversation topics
+    // Get recent WhatsApp conversations — ONLY follower/community topics matter
     const { data: recentWhatsapp } = await supabase
-      .from("whatsapp_content")
-      .select("title, content_type, body")
-      .order("created_at", { ascending: false })
-      .limit(10);
+      .from("whatsapp_content").select("title, content_type, body")
+      .order("created_at", { ascending: false }).limit(20);
 
-    // Get top performing content topics
+    // Get top performing content by ENGAGEMENT (what followers actually interact with)
     const { data: topContents } = await supabase
-      .from("contents")
-      .select("title, topic, score, channel")
-      .gte("score", 60)
-      .order("score", { ascending: false })
-      .limit(15);
+      .from("contents").select("title, topic, score, channel")
+      .gte("score", 50).order("score", { ascending: false }).limit(20);
+
+    // Get WhatsApp groups for community milestone strategy
+    const { data: whatsappGroups } = await supabase
+      .from("whatsapp_groups").select("*").eq("is_active", true);
+
+    // Get channel follower counts for milestone calculations
+    const { data: channels } = await supabase
+      .from("channels").select("platform, followers, name");
+
+    const totalFollowers = (channels || []).reduce((sum: number, c: any) => sum + (c.followers || 0), 0);
+    const totalWhatsappMembers = (whatsappGroups || []).reduce((sum: number, g: any) => sum + (g.members_count || 0), 0);
+
+    // Community milestone: every 1024 followers = new community group opportunity
+    const communityMilestone = Math.floor(totalFollowers / 1024);
+    const currentGroups = (whatsappGroups || []).length;
+    const shouldCreateNewGroup = communityMilestone > currentGroups;
 
     const trendingTopics = requestTopics || (viralIntel?.viral_patterns?.top_title_hooks || []).slice(0, 5);
-    const topicsList = (topContents || []).map((c: any) => c.topic).filter(Boolean);
-    const whatsappTopics = (recentWhatsapp || []).map((w: any) => w.title).join(", ");
+    const followerTopics = (topContents || []).map((c: any) => c.topic).filter(Boolean);
+    const whatsappConversations = (recentWhatsapp || []).map((w: any) => {
+      try { const b = JSON.parse(w.body || "{}"); return b.message || w.title; } catch { return w.title; }
+    }).join(" | ");
 
-    // AI curates the PERFECT book catalog
+    const existingTitles = existingBooks.map((b: any) => b.title).join(", ");
+
+    // AI curates NEW books to ADD to the growing catalog
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -79,75 +91,110 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um CURADOR EDITORIAL EXPERT em livros de psicologia, saúde mental, autoajuda e desenvolvimento pessoal. Sua missão é selecionar livros que as pessoas VÃO QUERER comprar naturalmente, sem parecer anúncio.
+            content: `Você é um CURADOR EDITORIAL que NUNCA VENDE. Você é como uma amiga estudante de psicologia que compartilha leituras que REALMENTE mudaram sua vida.
 
-ESTRATÉGIA DO PDF ORIGINAL:
-- NÃO é anúncio — é RECOMENDAÇÃO GENUÍNA como amiga
-- Os livros devem se conectar com os TEMAS que as pessoas estão discutindo nos grupos e nos comentários
-- Cada livro deve resolver uma DOR REAL que apareceu nas conversas
-- Use linguagem como: "Esse livro mudou minha forma de ver X" ou "Se vocês gostaram do último post sobre Y, esse livro vai muito além"
-- NUNCA diga "compre" — diga "vale muito a pena ler", "esse eu li e recomendo"
+REGRA ABSOLUTA — NUNCA VENDER:
+- NUNCA use palavras como: "compre", "adquira", "garanta o seu", "aproveite", "promoção", "desconto", "oferta"
+- NUNCA pareça anúncio, propaganda ou marketing
+- SEMPRE fale como amiga que leu e amou: "gente, esse livro me destruiu de tão bom", "li esse aqui chorando no ônibus", "esse mudou minha terapia"
+- O link aparece NATURALMENTE como "tá aqui pra quem quiser" — nunca como CTA de venda
+
+ESTRATÉGIA DE CATÁLOGO CRESCENTE:
+- O catálogo CRESCE a cada execução — NUNCA substitua livros antigos
+- Adicione 3-6 livros NOVOS que se conectam com o que os seguidores estão COMENTANDO e PEDINDO
+- Cada novo livro deve responder a uma DOR ou CURIOSIDADE que apareceu nas conversas recentes
+- Priorize livros que os SEGUIDORES pediram ou que se conectam com comentários reais
+- Remova apenas livros que não tiveram NENHUMA interação após 30 dias
+
+ESTRATÉGIA COMUNIDADES WhatsApp (a cada 1024 seguidores):
+- A cada 1024 novos seguidores, considere criar um novo grupo temático
+- Os livros do catálogo devem ser distribuídos entre os grupos por TEMA
+- Grupo de ansiedade → livros de ansiedade; Grupo de relacionamentos → livros de relacionamentos
+- A recomendação aparece DENTRO da conversa, como se fosse parte natural do papo
 
 REGRAS DE CURADORIA:
-1. Selecione APENAS livros REAIS best-sellers disponíveis na Amazon Brasil
-2. Use o ISBN-13 ou ASIN real quando souber
-3. Priorize livros em PORTUGUÊS (com edição brasileira)
-4. Mix: 60% psicologia/saúde mental + 20% desenvolvimento pessoal + 20% neurociência/comportamento
-5. Inclua variação de preço (barato + médio + premium)
-6. Para cada livro, gere uma MICRO-RESENHA pessoal (como estudante de psicologia falaria)
-7. Adapte por plataforma: WhatsApp = conversa, Instagram = visual, YouTube = descrição, Pinterest = pin
+1. APENAS livros REAIS best-sellers disponíveis na Amazon Brasil
+2. Use ASIN real quando souber
+3. Priorize edições em PORTUGUÊS
+4. Mix baseado no que seguidores PEDEM (não fórmula fixa)
+5. Variação de preço (barato + médio + premium)
+6. Micro-resenha PESSOAL (como estudante de psicologia falaria para amigas)
+7. NUNCA repita livros que já estão no catálogo existente
 
 FORMATOS DE LINK:
-- Amazon: https://www.amazon.com.br/dp/{ASIN}?tag={AFFILIATE_TAG}
-- Use o tag: "${affiliateTag}"
+- Amazon: https://www.amazon.com.br/dp/{ASIN}?tag=${affiliateTag}
 
 Retorne JSON:
 {
-  "catalog": [
+  "new_books": [
     {
-      "title": "Título do livro",
+      "title": "Título",
       "author": "Autor",
-      "asin": "ASIN ou ISBN",
+      "asin": "ASIN",
       "amazon_url": "https://www.amazon.com.br/dp/ASIN?tag=${affiliateTag}",
       "category": "ansiedade|relacionamentos|trauma|autoconhecimento|neurociência|comportamento|desenvolvimento_pessoal",
-      "micro_review": "Resenha pessoal de 1-2 frases como estudante de psicologia",
-      "whatsapp_mention": "Frase natural para mencionar no grupo WhatsApp",
-      "instagram_caption": "Frase para caption no Instagram (com emoji)",
-      "pinterest_description": "Descrição para pin no Pinterest (SEO otimizado)",
-      "youtube_mention": "Frase para mencionar em vídeo/descrição",
-      "connection_to_topic": "Qual tema/dor esse livro resolve",
+      "micro_review": "Resenha pessoal genuína de 1-2 frases",
+      "whatsapp_mention": "Frase NATURAL para o grupo (como se fosse parte de uma conversa)",
+      "instagram_caption": "Caption com emoji (nunca parecer anúncio)",
+      "pinterest_description": "Descrição SEO",
+      "youtube_mention": "Menção natural em vídeo",
+      "follower_demand": "Qual comentário/pedido/dor dos seguidores motivou essa indicação",
+      "target_group_type": "geral|ansiedade|relacionamentos|autoconhecimento|estudantes",
       "price_range": "barato|medio|premium",
       "relevance_score": 0-100
     }
   ],
-  "whatsapp_catalog_message": "Mensagem completa para o grupo WhatsApp com 3-5 livros recomendados de forma NATURAL (não parecer anúncio). Use formato de lista com emojis.",
-  "instagram_story_books": ["3 livros para recomendar em Stories com link"],
-  "pinterest_board_pins": [{"title": "título do pin", "description": "descrição SEO", "book_url": "link"}],
-  "weekly_theme": "Tema da semana que conecta os livros",
-  "strategy_notes": "Notas sobre a estratégia de monetização sutil"
+  "books_to_remove": ["títulos de livros sem interação que devem sair"],
+  "community_strategy": {
+    "total_followers": 0,
+    "milestone_1024": 0,
+    "current_groups": 0,
+    "should_create_group": false,
+    "suggested_new_group": "tipo do novo grupo baseado em demanda",
+    "group_book_distribution": {"grupo_tipo": ["livros recomendados para esse grupo"]}
+  },
+  "whatsapp_subtle_messages": {
+    "geral": "Mensagem natural para grupo geral (NÃO é catálogo, é CONVERSA com menção a 1-2 livros)",
+    "tematico": "Mensagem para grupo temático com livro relevante ao tema"
+  },
+  "weekly_theme": "Tema da semana baseado no que seguidores mais comentaram",
+  "strategy_notes": "Notas sobre o que está funcionando e o que ajustar"
 }
 
 Retorne APENAS JSON, sem markdown.`
           },
           {
             role: "user",
-            content: `CURADORIA DE LIVROS — ${new Date().toISOString().slice(0, 10)}
+            content: `CURADORIA INCREMENTAL — ${new Date().toISOString().slice(0, 10)}
 
-TÓPICOS TRENDING NAS REDES:
-${trendingTopics.join(", ") || "psicologia, ansiedade, relacionamentos, autoconhecimento"}
+LIVROS JÁ NO CATÁLOGO (NÃO repetir):
+${existingTitles || "Nenhum ainda — primeira curadoria"}
 
-TÓPICOS DOS NOSSOS MELHORES CONTEÚDOS (por score):
-${topicsList.join(", ") || "saúde mental, autoajuda"}
+TOTAL DE LIVROS EXISTENTES: ${existingBooks.length}
 
-CONVERSAS RECENTES NO WHATSAPP:
-${whatsappTopics || "temas gerais de psicologia"}
+DADOS DA COMUNIDADE:
+- Total seguidores: ${totalFollowers}
+- Milestone 1024: ${communityMilestone} (grupos possíveis)
+- Grupos WhatsApp ativos: ${currentGroups}
+- Membros WhatsApp total: ${totalWhatsappMembers}
+- Precisa criar novo grupo? ${shouldCreateNewGroup ? "SIM" : "NÃO"}
+- Grupos: ${(whatsappGroups || []).map((g: any) => `${g.name} (${g.group_type}, ${g.members_count} membros)`).join("; ") || "nenhum"}
+
+O QUE OS SEGUIDORES ESTÃO COMENTANDO/PEDINDO:
+${followerTopics.join(", ") || "temas gerais de psicologia e saúde mental"}
+
+CONVERSAS RECENTES NAS COMUNIDADES WhatsApp:
+${whatsappConversations || "primeiras conversas"}
+
+TÓPICOS VIRAIS NO MOMENTO:
+${trendingTopics.join(", ") || "psicologia, ansiedade, relacionamentos"}
 
 APRENDIZADO DO CÉREBRO:
-O que funciona: ${(learnings?.latest?.what_worked || []).join("; ") || "primeira curadoria"}
+${(learnings?.latest?.what_worked || []).join("; ") || "primeira curadoria"}
 
 PLATAFORMA FOCO: ${platform || "todas"}
 
-Selecione 8-12 livros REAIS best-sellers que se conectam com esses temas. Foque em livros que as pessoas dos grupos WhatsApp vão querer ler NATURALMENTE. Gere a mensagem WhatsApp de catálogo sutil.`
+Adicione 3-6 livros NOVOS que respondam ao que os seguidores estão pedindo. NUNCA venda — apenas recomende como amiga.`
           }
         ],
       }),
@@ -166,38 +213,56 @@ Selecione 8-12 livros REAIS best-sellers que se conectam com esses temas. Foque 
     let raw = aiData.choices?.[0]?.message?.content || "{}";
     raw = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
-    let catalog: any;
-    try {
-      catalog = JSON.parse(raw);
-    } catch {
-      catalog = { catalog: [], raw_analysis: raw };
-    }
+    let result: any;
+    try { result = JSON.parse(raw); } catch { result = { new_books: [], raw_analysis: raw }; }
 
-    // Save catalog to settings
+    // GROW the catalog: merge existing + new, remove flagged
+    const booksToRemove = new Set((result.books_to_remove || []).map((t: string) => t.toLowerCase()));
+    const keptBooks = existingBooks.filter((b: any) => !booksToRemove.has(b.title?.toLowerCase()));
+    const mergedCatalog = [...keptBooks, ...(result.new_books || [])];
+
+    // Save GROWING catalog
     await supabase.from("settings").upsert({
       key: "amazon_book_catalog",
       value: {
-        ...catalog,
+        catalog: mergedCatalog,
+        community_strategy: result.community_strategy || {},
+        whatsapp_subtle_messages: result.whatsapp_subtle_messages || {},
+        weekly_theme: result.weekly_theme,
+        strategy_notes: result.strategy_notes,
         affiliate_tag: affiliateTag,
         last_curated: new Date().toISOString(),
-        topics_used: trendingTopics,
+        total_books: mergedCatalog.length,
+        books_added_this_run: (result.new_books || []).length,
+        books_removed_this_run: booksToRemove.size,
+        follower_milestone: communityMilestone,
       },
     }, { onConflict: "key" });
 
-    // Log
+    // If milestone suggests new group, log it
+    if (shouldCreateNewGroup && result.community_strategy?.suggested_new_group) {
+      await supabase.from("system_logs").insert({
+        event_type: "comunidade",
+        message: `🎯 Milestone ${communityMilestone * 1024} seguidores! Sugestão: criar grupo "${result.community_strategy.suggested_new_group}"`,
+        level: "info",
+        metadata: { milestone: communityMilestone, total_followers: totalFollowers, suggestion: result.community_strategy.suggested_new_group },
+      });
+    }
+
     await supabase.from("system_logs").insert({
       event_type: "monetizacao",
-      message: `📚 Catálogo Amazon curado: ${(catalog.catalog || []).length} livros selecionados — Tema: "${catalog.weekly_theme || "variado"}" — Tag: ${affiliateTag}`,
+      message: `📚 Catálogo CRESCEU: +${(result.new_books || []).length} livros (total: ${mergedCatalog.length}) — Tema: "${result.weekly_theme || "variado"}" — Milestone: ${communityMilestone}x1024`,
       level: "info",
       metadata: {
-        books_count: (catalog.catalog || []).length,
-        categories: [...new Set((catalog.catalog || []).map((b: any) => b.category))],
+        total_books: mergedCatalog.length,
+        new_books: (result.new_books || []).length,
+        removed: booksToRemove.size,
+        milestone: communityMilestone,
         affiliate_tag: affiliateTag,
-        weekly_theme: catalog.weekly_theme,
       },
     });
 
-    return new Response(JSON.stringify(catalog), {
+    return new Response(JSON.stringify({ ...result, catalog: mergedCatalog, total_books: mergedCatalog.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

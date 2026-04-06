@@ -6,6 +6,57 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Fetch real trending data from YouTube RSS feed (public, no API key needed)
+async function fetchYouTubeTrending(region: string): Promise<any[]> {
+  try {
+    const url = `https://www.youtube.com/feed/trending?gl=${region}&hl=pt`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; TrendBot/1.0)" },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    // Extract video data from YouTube's initial data JSON
+    const match = html.match(/var ytInitialData = ({.*?});<\/script>/s);
+    if (!match) return [];
+
+    try {
+      const data = JSON.parse(match[1]);
+      const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+      const videos: any[] = [];
+
+      for (const tab of tabs) {
+        const sections = tab?.tabRenderer?.content?.sectionListRenderer?.contents || [];
+        for (const section of sections) {
+          const items = section?.itemSectionRenderer?.contents?.[0]?.shelfRenderer?.content?.expandedShelfContentsRenderer?.items || [];
+          for (const item of items) {
+            const vid = item?.videoRenderer;
+            if (vid) {
+              videos.push({
+                video_title: vid.title?.runs?.[0]?.text || "",
+                video_url: `https://www.youtube.com/watch?v=${vid.videoId}`,
+                creator: vid.ownerText?.runs?.[0]?.text || "",
+                creator_url: vid.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.canonicalBaseUrl
+                  ? `https://www.youtube.com${vid.ownerText.runs[0].navigationEndpoint.browseEndpoint.canonicalBaseUrl}`
+                  : "",
+                total_views: vid.viewCountText?.simpleText || vid.shortViewCountText?.simpleText || "",
+                platform: "youtube",
+                region,
+              });
+            }
+          }
+        }
+      }
+      return videos.slice(0, 20);
+    } catch {
+      return [];
+    }
+  } catch (e) {
+    console.error(`YouTube trending fetch failed for ${region}:`, e);
+    return [];
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -17,228 +68,152 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // HISTORICAL LEARNING: Pull past successful content + snapshots
-    const { data: topContents } = await supabase
-      .from("contents")
-      .select("title, topic, channel, content_type, score, status")
-      .gte("score", 70)
-      .order("score", { ascending: false })
-      .limit(10);
+    // Fetch REAL trending data from YouTube (no API key needed)
+    const [brTrending, usTrending, globalTrending] = await Promise.all([
+      fetchYouTubeTrending("BR"),
+      fetchYouTubeTrending("US"),
+      fetchYouTubeTrending("GB"),
+    ]);
 
-    const { data: topSnapshots } = await supabase
-      .from("video_snapshots")
-      .select("video_title, creator, platform, region, total_views, views_growth_1h, momentum_score, acceleration, metadata")
-      .gte("momentum_score", 70)
-      .order("momentum_score", { ascending: false })
-      .limit(15);
+    console.log(`Fetched real trending: BR=${brTrending.length}, US=${usTrending.length}, GB=${globalTrending.length}`);
 
-    // Pull previous learnings
-    const { data: prevLearnings } = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "brain_learnings")
-      .single();
+    // Pull historical data for learning
+    const [{ data: topContents }, { data: prevLearnings }] = await Promise.all([
+      supabase.from("contents").select("title, topic, channel, content_type, score, status")
+        .gte("score", 70).order("score", { ascending: false }).limit(10),
+      supabase.from("settings").select("value").eq("key", "brain_learnings").single(),
+    ]);
 
-    const historicalContext = `
-APRENDIZADO HISTÓRICO DO CÉREBRO (use para decidir melhor):
+    const realVideosContext = `
+VÍDEOS REAIS DO YOUTUBE TRENDING (dados verificados, NÃO inventados):
 
-📊 TOP CONTEÚDOS QUE JÁ GERAMOS (por score):
-${(topContents || []).map((c: any, i: number) => `${i+1}. "${c.title}" — Score: ${c.score}, Canal: ${c.channel}, Tipo: ${c.content_type}, Status: ${c.status}`).join("\n") || "Nenhum conteúdo gerado ainda."}
+🇧🇷 BRASIL TRENDING:
+${brTrending.map((v, i) => `${i+1}. "${v.video_title}" por ${v.creator} — ${v.total_views} — URL: ${v.video_url}`).join("\n") || "Nenhum dado disponível"}
 
-🔥 VÍDEOS QUE MAIS CRESCERAM NO HISTÓRICO (snapshots passados):
-${(topSnapshots || []).map((s: any, i: number) => `${i+1}. "${s.video_title}" por ${s.creator} (${s.platform}/${s.region}) — Views: ${s.total_views}, Crescimento/h: ${s.views_growth_1h}, Momentum: ${s.momentum_score}, Aceleração: ${s.acceleration}`).join("\n") || "Nenhum snapshot ainda."}
+🇺🇸 EUA TRENDING:
+${usTrending.map((v, i) => `${i+1}. "${v.video_title}" por ${v.creator} — ${v.total_views} — URL: ${v.video_url}`).join("\n") || "Nenhum dado disponível"}
 
-🧠 LIÇÕES APRENDIDAS ATÉ AGORA:
-${prevLearnings?.value ? JSON.stringify(prevLearnings.value) : "Primeira execução — começando a aprender."}
+🇬🇧 UK TRENDING:
+${globalTrending.map((v, i) => `${i+1}. "${v.video_title}" por ${v.creator} — ${v.total_views} — URL: ${v.video_url}`).join("\n") || "Nenhum dado disponível"}
 
-INSTRUÇÕES DE APRENDIZADO:
-- Analise os padrões dos conteúdos com MAIOR score e replique
-- Identifique quais FORMATOS (reel, shorts, artigo) funcionaram melhor
-- Veja quais TÓPICOS tiveram mais momentum e priorize similares
-- Compare com os vídeos virais ATUAIS — encontre interseções
-- EVITE padrões de conteúdos com score < 50 (não funcionaram)
-- A cada rodada, INOVE: traga um formato ou ângulo NUNCA testado antes
+HISTÓRICO DE CONTEÚDOS GERADOS:
+${(topContents || []).map((c: any, i: number) => `${i+1}. "${c.title}" — Score: ${c.score}`).join("\n") || "Nenhum conteúdo gerado ainda."}
+
+LIÇÕES ANTERIORES:
+${prevLearnings?.value ? JSON.stringify((prevLearnings.value as any).latest || {}) : "Primeira execução."}
 `;
 
-    const viralAnalysisRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
-            content: `Você é um analista de growth hacking com ESTATÍSTICA QUÂNTICA DE CRESCIMENTO e APRENDIZADO INFINITO — especialista em identificar VÍDEOS INDIVIDUAIS com maior crescimento de views.
+            content: `Você é um analista de growth hacking para conteúdo de saúde mental, comportamento humano e desenvolvimento pessoal.
 
-PRINCÍPIO #1 — APRENDIZADO CONTÍNUO:
-- Você tem acesso ao HISTÓRICO de conteúdos que já geramos e seus scores
-- Você tem acesso aos SNAPSHOTS de vídeos virais que acompanhamos
-- USE esse histórico para APRENDER o que funciona e EVOLUIR a cada rodada
-- NUNCA repita a mesma estratégia se ela teve score baixo
-- SEMPRE traga pelo menos 1 INOVAÇÃO que não foi tentada antes
+REGRA ABSOLUTA: Você NÃO pode inventar vídeos, títulos ou URLs. Use APENAS os vídeos reais fornecidos nos dados.
 
-PRINCÍPIO #2 — FOCO EM VÍDEOS, NÃO EM CANAIS:
-- O ranking é de VÍDEOS ESPECÍFICOS, não de canais
-- Priorize VÍDEOS com MAIS MILHÕES DE VIEWS e que MAIS CRESCERAM em views nas últimas horas
-- Um vídeo com 50M views que ganhou +2M na última hora é #1
-- SEMPRE inclua o TÍTULO EXATO do vídeo, VIEWS TOTAIS
+Sua tarefa:
+1. Dos vídeos reais do YouTube Trending fornecidos, selecione os mais relevantes para o nicho (saúde mental, psicologia, autoajuda, neurociência, relacionamentos, comportamento humano)
+2. Se um vídeo trending NÃO é do nicho, IGNORE — não o inclua
+3. Para cada vídeo selecionado, analise o potencial de inspiração para criar conteúdo ORIGINAL
+4. Gere tópicos de conteúdo INSPIRADOS nos trends reais
 
-MÉTRICAS POR VÍDEO:
-1. **Views Totais**: número absoluto de visualizações
-2. **Crescimento de Views/hora**: quantas views novas na última hora
-3. **Aceleração**: crescimento acelerando ou desacelerando
-4. **Momentum Score (0-100)**: combina views totais + crescimento + engajamento
-5. **Ponto de Inflexão**: antes/no/após pico viral
+IMPORTANTE: Mantenha os video_url EXATOS como fornecidos. NÃO modifique URLs.
 
-PESQUISE nas 4 plataformas — PRIORIZE MUNDIAL sobre BRASIL:
-- Vídeos virais do MUNDO INTEIRO são a melhor fonte de inspiração: menor risco de plágio, conteúdo inédito para o público BR
-- PRIORIZE vídeos em INGLÊS, ESPANHOL, FRANCÊS, ALEMÃO, COREANO, JAPONÊS — traduzir e adaptar = conteúdo original + viral comprovado
-- INSTAGRAM: Reels ESPECÍFICOS com mais views e maior crescimento AGORA (BR + mundo)
-- YOUTUBE: Vídeos ESPECÍFICOS no Trending global, Shorts que EXPLODIRAM internacionalmente
-- TIKTOK: Vídeos ESPECÍFICOS que acumularam milhões de views nas últimas horas (TODOS os países)
-- PINTEREST: Pins ESPECÍFICOS de psicologia/saúde mental com mais saves globalmente
-
-ESTRATÉGIA DE TRADUÇÃO/ADAPTAÇÃO:
-- Para cada vídeo mundial, indique o POTENCIAL DE ADAPTAÇÃO para Brasil (1-100)
-- Quanto mais distante culturalmente o original, MELHOR (menos chance de parecer cópia)
-- Indique EXATAMENTE o que adaptar: idioma, exemplos culturais, referências locais
-- O conteúdo adaptado deve ser IRRECONHECÍVEL como tradução — deve parecer 100% original brasileiro
-
-Foque: psicologia, saúde mental, autoajuda, desenvolvimento pessoal, neurociência, relacionamentos, comportamento humano.
-
-Retorne EXATAMENTE um JSON com esta estrutura:
+Retorne JSON:
 {
-  "viral_patterns": {
-    "top_title_hooks": ["5 títulos EXATOS dos vídeos com mais views"],
-    "thumbnail_patterns": ["padrões visuais"],
-    "avg_duration_seconds": 45,
-    "best_posting_times": ["horários com maior aceleração"],
-    "trending_hashtags": ["#tag1", "#tag2", "até 15"],
-    "cta_patterns": ["CTAs dos vídeos com mais conversão"],
-    "hook_first_3_seconds": ["ganchos dos vídeos com maior retenção"],
-    "growth_signals": ["sinais de explosão viral"]
-  },
   "top_10_ranking_brasil": [
     {
       "rank": 1,
-      "video_title": "TÍTULO EXATO do vídeo",
-      "video_url": "URL DIRETA do vídeo (ex: https://www.youtube.com/watch?v=XXXXX ou https://www.instagram.com/reel/XXXXX ou https://www.tiktok.com/@user/video/XXXXX)",
-      "creator": "nome do criador",
-      "creator_url": "URL do perfil do criador",
-      "platform": "youtube|instagram|tiktok",
-      "total_views": "ex: 15M views",
-      "views_growth_1h": "ex: +2.3M views na última hora",
-      "views_growth_24h": "ex: +12M nas últimas 24h",
-      "acceleration": "exponencial|linear|desacelerando",
-      "momentum_score": 95,
-      "why_viral": "o que fez ESTE VÍDEO explodir",
-      "content_format": "reel|shorts|tiktok|vídeo longo",
-      "duration_seconds": 60,
-      "inflection_point": "antes_do_pico|no_pico|pos_pico",
-      "replication_strategy": "como replicar para psicologia"
+      "video_title": "TÍTULO EXATO do trending",
+      "video_url": "URL EXATA do YouTube como fornecida",
+      "creator": "nome exato",
+      "creator_url": "URL do canal",
+      "platform": "youtube",
+      "total_views": "views como fornecido",
+      "momentum_score": 0-100,
+      "why_relevant": "por que é relevante para nosso nicho",
+      "replication_strategy": "como criar conteúdo ORIGINAL inspirado"
     }
   ],
   "top_10_ranking_mundial": [
     {
       "rank": 1,
-      "video_title": "TÍTULO TRADUZIDO para PT-BR",
-      "video_url": "URL DIRETA do vídeo original",
-      "original_title": "título original no idioma de origem",
+      "video_title": "TÍTULO TRADUZIDO",
+      "original_title": "título original",
+      "video_url": "URL EXATA",
       "creator": "nome",
-      "creator_url": "URL do perfil do criador",
-      "platform": "youtube|instagram|tiktok",
-      "country": "país (em português)",
-      "total_views": "ex: 80M views",
-      "views_growth_1h": "+5M na última hora",
-      "views_growth_24h": "+40M nas últimas 24h",
-      "acceleration": "exponencial|linear|desacelerando",
-      "momentum_score": 98,
-      "why_viral": "causa (TRADUZIDO PT-BR)",
-      "content_format": "formato",
-      "language": "idioma original",
-      "inflection_point": "antes_do_pico|no_pico|pos_pico",
-      "adaptation_potential": 95,
-      "adaptation_guide": "exatamente o que mudar para parecer 100% original BR",
-      "plagiarism_risk": "baixo|medio|alto — quanto menor melhor",
-      "insight_for_brazil": "como adaptar para psicologia BR"
+      "creator_url": "URL",
+      "platform": "youtube",
+      "country": "país",
+      "total_views": "views",
+      "momentum_score": 0-100,
+      "language": "idioma",
+      "why_relevant": "relevância para nicho",
+      "adaptation_guide": "como adaptar para BR",
+      "insight_for_brazil": "insight"
     }
   ],
   "topics": [
     {
-      "topic": "slug-sem-acento",
-      "label": "Nome legível",
-      "reason": "por que vai viralizar — baseado no VÍDEO que inspirou",
-      "inspired_by_video": "título exato + views totais",
-      "viral_title": "Título otimizado para CTR máximo",
-      "hook": "Gancho dos primeiros 3 segundos",
-      "hashtags": ["#tag1", "#tag2"],
-      "suggested_type": "reel|carrossel|story|artigo|pin|idea_pin",
-      "suggested_channel": "instagram|youtube|tiktok|pinterest",
-      "optimal_post_time": "melhor horário",
-      "monetization_angle": "como monetizar",
-      "whatsapp_cta": "CTA para comunidade WhatsApp",
-      "predicted_views": "previsão de views"
+      "topic": "slug",
+      "label": "Nome",
+      "reason": "baseado em qual vídeo real",
+      "inspired_by_video": "título + URL do vídeo real",
+      "viral_title": "Título otimizado",
+      "hook": "Gancho",
+      "hashtags": ["#tag1"],
+      "suggested_type": "reel|carrossel|story|artigo",
+      "suggested_channel": "instagram|youtube|tiktok|pinterest"
     }
   ],
-  "momentum_analysis": {
-    "hottest_video_now": "vídeo com maior crescimento AGORA",
-    "best_time_to_post": "próxima janela ideal",
-    "dying_videos": ["vídeos perdendo views — evitar"],
-    "emerging_videos": ["vídeos começando a explodir — maior oportunidade"]
+  "viral_patterns": {
+    "trending_hashtags": ["hashtags reais"],
+    "hook_first_3_seconds": ["ganchos efetivos"],
+    "best_posting_times": ["horários"]
   },
-  "monetization_insights": {
-    "trending_products": ["produtos dos vídeos mais vistos"],
-    "community_growth_tactics": ["táticas de conversão"],
-    "revenue_streams": ["fontes de receita"]
-  },
+  "data_source": "youtube_trending_real",
+  "data_freshness": "timestamp ISO",
+  "disclaimer": "Dados de YouTube Trending. Views e rankings mudam constantemente.",
   "learnings": {
-    "what_worked": ["padrões de sucesso identificados no histórico"],
-    "what_failed": ["padrões a evitar"],
-    "new_strategy": "nova rota/inovação para esta rodada",
-    "confidence_level": 85,
-    "evolution_note": "o que o cérebro aprendeu de NOVO nesta rodada"
+    "what_worked": [],
+    "new_strategy": "",
+    "evolution_note": ""
   }
 }
 
-Retorne APENAS o JSON, sem markdown.`,
+Se NENHUM vídeo trending for relevante para o nicho, retorne arrays vazios e explique em "learnings".
+Retorne APENAS JSON, sem markdown.`,
           },
           {
             role: "user",
-            content: `Data: ${new Date().toISOString().slice(0, 10)}. Hora: ${new Date().toISOString().slice(11, 16)} UTC.
+            content: `Data: ${new Date().toISOString()}
 
-${historicalContext}
+${realVideosContext}
 
-🎬 ANÁLISE DE VÍDEOS INDIVIDUAIS — Foque em VÍDEOS ESPECÍFICOS, não canais.
-
-🇧🇷 TOP 10 VÍDEOS BRASIL (por views + crescimento):
-📱 INSTAGRAM: Quais REELS ESPECÍFICOS de psicologia/autoajuda têm MAIS MILHÕES DE VIEWS agora?
-🎬 YOUTUBE: Quais VÍDEOS ESPECÍFICOS de psicologia estão no Trending?
-🎵 TIKTOK: Quais VÍDEOS ESPECÍFICOS de saúde mental têm mais views?
-
-🌍 TOP 10 VÍDEOS MUNDIAL (por views + crescimento):
-- Analise TODOS os países — traduza tudo para PT-BR
-
-📊 COMPARE com o histórico acima. O que MUDOU? O que está CRESCENDO? O que MORREU?
-🧠 Gere 5 tópicos INSPIRADOS nos VÍDEOS com mais views + lições do histórico.
-🔮 Inclua "learnings" com o que o cérebro aprendeu de NOVO nesta rodada.`,
+Analise APENAS os vídeos reais fornecidos. Filtre os relevantes para saúde mental/psicologia/comportamento.
+Gere tópicos de conteúdo inspirados nos trends reais.`,
           },
         ],
       }),
     });
 
-    if (!viralAnalysisRes.ok) {
-      if (viralAnalysisRes.status === 429) {
+    if (!aiRes.ok) {
+      if (aiRes.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI error: ${viralAnalysisRes.status}`);
+      throw new Error(`AI error: ${aiRes.status}`);
     }
 
-    const aiData = await viralAnalysisRes.json();
+    const aiData = await aiRes.json();
     let rawContent = aiData.choices?.[0]?.message?.content || "{}";
     rawContent = rawContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
@@ -246,87 +221,91 @@ ${historicalContext}
     try {
       analysis = JSON.parse(rawContent);
     } catch {
-      console.error("Failed to parse viral analysis:", rawContent);
-      analysis = { topics: [], viral_patterns: {}, top_10_ranking_brasil: [], top_10_ranking_mundial: [], momentum_analysis: {}, monetization_insights: {}, learnings: {} };
+      console.error("Failed to parse AI response:", rawContent.slice(0, 500));
+      analysis = { topics: [], top_10_ranking_brasil: [], top_10_ranking_mundial: [], viral_patterns: {}, learnings: {} };
     }
 
+    // Validate URLs — remove any entry without a real youtube.com URL
+    const validateEntries = (entries: any[]) =>
+      (entries || []).filter((v: any) =>
+        v.video_url && (v.video_url.includes("youtube.com/watch") || v.video_url.includes("youtu.be/"))
+      );
+
+    const competitorAnalysis = validateEntries(analysis.top_10_ranking_brasil);
+    const worldRanking = validateEntries(analysis.top_10_ranking_mundial);
     const topics = analysis.topics || [];
     const viralPatterns = analysis.viral_patterns || {};
-    const competitorAnalysis = analysis.top_10_ranking_brasil || analysis.competitor_analysis || [];
-    const worldRanking = analysis.top_10_ranking_mundial || [];
-    const monetizationInsights = analysis.monetization_insights || {};
-    const momentumAnalysis = analysis.momentum_analysis || {};
     const learnings = analysis.learnings || {};
 
-    // Save viral intelligence
+    // Save to settings
     await supabase.from("settings").upsert({
       key: "viral_intelligence",
       value: {
         viral_patterns: viralPatterns,
         competitor_analysis: competitorAnalysis,
         world_ranking: worldRanking,
-        momentum_analysis: momentumAnalysis,
-        monetization_insights: monetizationInsights,
-        learnings,
+        data_source: "youtube_trending_real",
+        data_freshness: new Date().toISOString(),
+        disclaimer: analysis.disclaimer || "Dados reais do YouTube Trending",
+        raw_trending_count: { br: brTrending.length, us: usTrending.length, gb: globalTrending.length },
         updated_at: new Date().toISOString(),
       },
     }, { onConflict: "key" });
 
-    // SAVE LEARNINGS — accumulate knowledge over time
-    const prevLearningsList = (prevLearnings?.value as any)?.history || [];
-    const newLearningEntry = {
+    // Save learnings
+    const prevLearningsList = ((prevLearnings?.value as any)?.history || []).slice(-49);
+    const newLearning = {
       timestamp: new Date().toISOString(),
       what_worked: learnings.what_worked || [],
-      what_failed: learnings.what_failed || [],
       new_strategy: learnings.new_strategy || "",
-      confidence: learnings.confidence_level || 0,
       evolution_note: learnings.evolution_note || "",
-      top_video_that_inspired: competitorAnalysis[0]?.video_title || "",
-      top_video_views: competitorAnalysis[0]?.total_views || "",
+      real_videos_found: { br: competitorAnalysis.length, world: worldRanking.length },
     };
-    prevLearningsList.push(newLearningEntry);
-    // Keep last 50 learnings
-    const trimmedHistory = prevLearningsList.slice(-50);
+    prevLearningsList.push(newLearning);
 
     await supabase.from("settings").upsert({
       key: "brain_learnings",
       value: {
-        history: trimmedHistory,
-        total_iterations: trimmedHistory.length,
+        history: prevLearningsList,
+        total_iterations: prevLearningsList.length,
         last_updated: new Date().toISOString(),
-        latest: newLearningEntry,
+        latest: newLearning,
       },
     }, { onConflict: "key" });
 
+    // Save real video snapshots
+    for (const v of [...competitorAnalysis, ...worldRanking].slice(0, 15)) {
+      await supabase.from("video_snapshots").insert({
+        video_title: v.video_title || v.original_title || "",
+        creator: v.creator || "",
+        platform: v.platform || "youtube",
+        region: v.country || "brasil",
+        total_views: v.total_views || "",
+        momentum_score: v.momentum_score || 0,
+        metadata: { video_url: v.video_url, source: "youtube_trending_real" },
+      });
+    }
+
     // Log
     await supabase.from("system_logs").insert({
-      event_type: "aprendizado",
-      message: `🧠 Cérebro aprendeu: "${learnings.evolution_note || 'nova iteração'}" — Confiança: ${learnings.confidence_level || 0}% — Iteração #${trimmedHistory.length}`,
-      level: "info",
-      metadata: {
-        learnings,
-        iteration: trimmedHistory.length,
-        top_video: competitorAnalysis[0]?.video_title,
-        topics_count: topics.length,
-      },
-    });
-
-    await supabase.from("system_logs").insert({
       event_type: "pesquisa",
-      message: `Análise viral: ${topics.length} tópicos, ${competitorAnalysis.length} vídeos BR, ${worldRanking.length} vídeos mundiais, ${(viralPatterns.trending_hashtags || []).length} hashtags`,
+      message: `📊 Pesquisa REAL: ${brTrending.length} trending BR, ${usTrending.length} trending US — ${competitorAnalysis.length} relevantes BR, ${worldRanking.length} relevantes mundo`,
       level: "info",
       metadata: {
+        source: "youtube_trending_real",
         topics_count: topics.length,
-        top_videos: competitorAnalysis.map((c: any) => c.video_title || c.channel),
-        top_hashtags: (viralPatterns.trending_hashtags || []).slice(0, 5),
-        date: new Date().toISOString(),
+        br_relevant: competitorAnalysis.length,
+        world_relevant: worldRanking.length,
       },
     });
 
     return new Response(JSON.stringify({
-      topics, viral_patterns: viralPatterns, competitor_analysis: competitorAnalysis,
-      world_ranking: worldRanking, momentum_analysis: momentumAnalysis,
-      monetization_insights: monetizationInsights, learnings,
+      topics,
+      viral_patterns: viralPatterns,
+      competitor_analysis: competitorAnalysis,
+      world_ranking: worldRanking,
+      data_source: "youtube_trending_real",
+      learnings,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

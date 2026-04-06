@@ -148,6 +148,84 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_history: {
+        Row: {
+          comments_count: number | null
+          content_format: string | null
+          created_at: string
+          duration_sec: number | null
+          engagement_rate: number | null
+          followers_gained: number | null
+          hook_pattern: string | null
+          id: string
+          language: string | null
+          learned_insights: Json | null
+          likes_count: number | null
+          metadata: Json | null
+          platform: string
+          posted_at: string | null
+          revenue_estimated: number | null
+          shares_count: number | null
+          title: string
+          topic: string | null
+          updated_at: string
+          video_url: string | null
+          views_24h: number | null
+          views_48h: number | null
+          views_7d: number | null
+        }
+        Insert: {
+          comments_count?: number | null
+          content_format?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          engagement_rate?: number | null
+          followers_gained?: number | null
+          hook_pattern?: string | null
+          id?: string
+          language?: string | null
+          learned_insights?: Json | null
+          likes_count?: number | null
+          metadata?: Json | null
+          platform: string
+          posted_at?: string | null
+          revenue_estimated?: number | null
+          shares_count?: number | null
+          title: string
+          topic?: string | null
+          updated_at?: string
+          video_url?: string | null
+          views_24h?: number | null
+          views_48h?: number | null
+          views_7d?: number | null
+        }
+        Update: {
+          comments_count?: number | null
+          content_format?: string | null
+          created_at?: string
+          duration_sec?: number | null
+          engagement_rate?: number | null
+          followers_gained?: number | null
+          hook_pattern?: string | null
+          id?: string
+          language?: string | null
+          learned_insights?: Json | null
+          likes_count?: number | null
+          metadata?: Json | null
+          platform?: string
+          posted_at?: string | null
+          revenue_estimated?: number | null
+          shares_count?: number | null
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          video_url?: string | null
+          views_24h?: number | null
+          views_48h?: number | null
+          views_7d?: number | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string

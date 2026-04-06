@@ -235,8 +235,31 @@ serve(async (req) => {
     let published = 0;
     const results: any[] = [];
 
+    // Pre-check daily limits for all platforms
+    const platformPublishCounts: Record<string, number> = {};
+    for (const p of connectedPlatforms) {
+      platformPublishCounts[p] = await getTodayPublishCount(supabase, p);
+    }
+
     for (const content of contents || []) {
       const targetChannel = content.channel || "instagram";
+      
+      // Check daily limit for this platform
+      const dailyLimit = DAILY_POST_LIMITS[targetChannel] || 2;
+      const todayCount = (platformPublishCounts[targetChannel] || 0);
+      const remaining = getRemainingSlots(dailyLimit, todayCount);
+      
+      if (remaining <= 0) {
+        results.push({ 
+          title: content.title, channel: targetChannel, 
+          status: "limite_diario_atingido", 
+          daily_limit: dailyLimit, 
+          published_today: todayCount,
+          message: `Já publicou ${todayCount}/${dailyLimit} hoje em ${targetChannel}` 
+        });
+        continue;
+      }
+
       if (!isOptimalTime(targetChannel)) {
         results.push({ title: content.title, channel: targetChannel, status: "aguardando_horario", next: getNextOptimalTime(targetChannel) });
         continue;

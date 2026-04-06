@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { MessageCircle, Users, Plus, Send, Sparkles, Trash2, Link, Save, Loader2 } from "lucide-react";
+import { MessageCircle, Users, Plus, Send, Sparkles, Trash2, Link, Save, Loader2, Bot, Copy, CheckCircle } from "lucide-react";
 import { useState } from "react";
 
 const GROUP_TYPES = [

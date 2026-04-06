@@ -320,7 +320,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const currentHour = new Date().getUTCHours();
+    // Parse body for force flag
+    let forceAll = false;
+    try {
+      const body = await req.json();
+      forceAll = body?.force === true;
+    } catch { /* no body */ }
+
+    const currentHour = forceAll ? 0 : new Date().getUTCHours(); // hour 0 matches youtube (even), newsapi, etc.
 
     // Load API keys from settings
     const { data: allSettings } = await supabase.from("settings").select("key, value");

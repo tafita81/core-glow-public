@@ -200,10 +200,10 @@ async function fetchYouTubeTrending(apiKey: string, regionCode: string): Promise
   }
 }
 
-async function searchYouTubeNiche(apiKey: string, query: string): Promise<any[]> {
+async function searchYouTubeNiche(apiKey: string, query: string, daysBack = 30): Promise<any[]> {
   try {
     const q = encodeURIComponent(query);
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&order=viewCount&publishedAfter=${getDateDaysAgo(7)}&maxResults=10&key=${apiKey}`;
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&order=viewCount&publishedAfter=${getDateDaysAgo(daysBack)}&maxResults=15&key=${apiKey}`;
     const res = await fetch(searchUrl);
     if (!res.ok) return [];
     const data = await res.json();
@@ -214,7 +214,6 @@ async function searchYouTubeNiche(apiKey: string, query: string): Promise<any[]>
     const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds.join(",")}&key=${apiKey}`;
     const statsRes = await fetch(statsUrl);
     if (!statsRes.ok) {
-      // Fallback without stats
       return (data.items || []).map((item: any) => ({
         video_title: item.snippet?.title || "",
         video_url: `https://www.youtube.com/watch?v=${item.id?.videoId}`,
@@ -224,20 +223,22 @@ async function searchYouTubeNiche(apiKey: string, query: string): Promise<any[]>
       }));
     }
     const statsData = await statsRes.json();
-    return (statsData.items || []).map((item: any) => ({
-      video_title: item.snippet?.title || "",
-      description: item.snippet?.description || "",
-      channel_title: item.snippet?.channelTitle || "",
-      video_url: `https://www.youtube.com/watch?v=${item.id}`,
-      creator: item.snippet?.channelTitle || "",
-      creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,
-      total_views: formatViews(item.statistics?.viewCount),
-      raw_views: parseInt(item.statistics?.viewCount || "0"),
-      likes: parseInt(item.statistics?.likeCount || "0"),
-      comments: parseInt(item.statistics?.commentCount || "0"),
-      platform: "youtube",
-      published_at: item.snippet?.publishedAt,
-    }));
+    return (statsData.items || [])
+      .map((item: any) => ({
+        video_title: item.snippet?.title || "",
+        description: item.snippet?.description || "",
+        channel_title: item.snippet?.channelTitle || "",
+        video_url: `https://www.youtube.com/watch?v=${item.id}`,
+        creator: item.snippet?.channelTitle || "",
+        creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,
+        total_views: formatViews(item.statistics?.viewCount),
+        raw_views: parseInt(item.statistics?.viewCount || "0"),
+        likes: parseInt(item.statistics?.likeCount || "0"),
+        comments: parseInt(item.statistics?.commentCount || "0"),
+        platform: "youtube",
+        published_at: item.snippet?.publishedAt,
+      }))
+      .filter((v: any) => v.raw_views >= 50000); // Only videos with 50K+ views
   } catch (e) {
     console.error("YouTube search error:", e);
     return [];
@@ -355,14 +356,14 @@ serve(async (req) => {
     if (youtubeApiKey) {
       const check = await canCallApi(supabase, "youtube", currentHour, forceAll);
       if (check.allowed) {
-        // BRASIL — trending geral + busca focada em psicologia
+        // BRASIL — trending geral + busca focada em psicologia (30 dias, mais resultados)
         promises.push(fetchYouTubeTrending(youtubeApiKey, "BR"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental terapia ansiedade depressão"));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental ansiedade depressão terapia", 30));
         // MUNDIAL (EUA + Europa) — prioridade, menos riscos
         promises.push(fetchYouTubeTrending(youtubeApiKey, "US"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology therapy mental health anxiety depression self improvement"));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology mental health anxiety depression therapy self improvement", 30));
         promises.push(fetchYouTubeTrending(youtubeApiKey, "GB")); // Reino Unido
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psychologie therapie mentale gesundheit angst")); // Alemanha
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology therapy mental health motivational", 30)); // broader
         apisCalled.push("youtube");
       } else {
         apisSkipped.push(`youtube (${check.reason})`);
@@ -496,9 +497,14 @@ serve(async (req) => {
     }
 
     // Build rankings — sorted by VIDEO views, ONLY psychology/mental health
-    // BRASIL — trending + psicologia (filtrado)
+    // Minimum view thresholds to ensure quality rankings
+    const MIN_VIEWS_BR = 10000;      // 10K minimum for Brazil
+    const MIN_VIEWS_WORLD = 50000;   // 50K minimum for World
+
+    // BRASIL — trending + psicologia (filtrado + mínimo de views)
     const brRanking = [...ytBR, ...ytNicheBR]
       .filter(isPsychRelated)
+      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS_BR)
       .sort((a: any, b: any) => (b.raw_views || 0) - (a.raw_views || 0))
       .slice(0, 10)
       .map((v: any, i: number) => ({
@@ -508,10 +514,11 @@ serve(async (req) => {
         why_relevant: `🇧🇷 ${v.total_views || "N/A"} views`,
       }));
 
-    // MUNDIAL (EUA + Europa) — prioridade máxima, FILTRADO psicologia
+    // MUNDIAL (EUA + Europa) — prioridade máxima, FILTRADO psicologia + mínimo de views
     const worldRanking = [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
       .filter((v: any) => v.region !== "BR")
       .filter(isPsychRelated)
+      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS_WORLD)
       .sort((a: any, b: any) => (b.raw_views || 0) - (a.raw_views || 0))
       .slice(0, 15)
       .map((v: any, i: number) => {

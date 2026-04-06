@@ -41,7 +41,7 @@ function getDailyBudget(monthlyLimit: number, daysInMonth = 31): number {
 // Google Trends RSS: unlimited, no key needed
 
 const API_LIMITS = {
-  youtube: { daily_calls: 10, daily_units: 10000, units_per_call: 202 },
+  youtube: { daily_calls: 8, daily_units: 10000, units_per_call: 305 },
   reddit: { daily_calls: 3 },
   newsapi: { daily_calls: 3, daily_requests: 100 },
   serpapi: { monthly_searches: 100, daily_calls: 3 },
@@ -344,10 +344,14 @@ serve(async (req) => {
     if (youtubeApiKey) {
       const check = await canCallApi(supabase, "youtube", currentHour);
       if (check.allowed) {
+        // BRASIL — trending geral + busca focada em psicologia
         promises.push(fetchYouTubeTrending(youtubeApiKey, "BR"));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental terapia ansiedade depressão"));
+        // MUNDIAL (EUA + Europa) — prioridade, menos riscos
         promises.push(fetchYouTubeTrending(youtubeApiKey, "US"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental ansiedade"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology mental health anxiety self improvement"));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology therapy mental health anxiety depression self improvement"));
+        promises.push(fetchYouTubeTrending(youtubeApiKey, "GB")); // Reino Unido
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychologie therapie mentale gesundheit angst")); // Alemanha
         apisCalled.push("youtube");
       } else {
         apisSkipped.push(`youtube (${check.reason})`);
@@ -380,7 +384,6 @@ serve(async (req) => {
       const check = await canCallApi(supabase, "serpapi", currentHour);
       if (check.allowed) {
         apisCalled.push("serpapi");
-        // SerpAPI call would go here when integrated
         await logApiCall(supabase, "serpapi", 1);
       } else {
         apisSkipped.push(`serpapi (${check.reason})`);
@@ -390,16 +393,20 @@ serve(async (req) => {
     const results = await Promise.allSettled(promises);
     const googleTrends = (results[0] as any)?.value || [];
 
-    let ytBR: any[] = [], ytUS: any[] = [], ytNicheBR: any[] = [], ytNicheEN: any[] = [];
+    let ytBR: any[] = [], ytNicheBR: any[] = [];
+    let ytUS: any[] = [], ytNicheEN: any[] = [], ytGB: any[] = [], ytNicheDE: any[] = [];
     let redditPosts: any[] = [], news: any[] = [];
     let idx = 1;
 
     if (apisCalled.includes("youtube")) {
       ytBR = (results[idx++] as any)?.value || [];
-      ytUS = (results[idx++] as any)?.value || [];
       ytNicheBR = (results[idx++] as any)?.value || [];
+      ytUS = (results[idx++] as any)?.value || [];
       ytNicheEN = (results[idx++] as any)?.value || [];
-      await logApiCall(supabase, "youtube", 202);
+      ytGB = (results[idx++] as any)?.value || [];
+      ytNicheDE = (results[idx++] as any)?.value || [];
+      // 2 trending (1 unit each) + 3 searches (100 units each) + 3 stats calls (~1 each) ≈ 305 units
+      await logApiCall(supabase, "youtube", 305);
     }
     if (apisCalled.includes("reddit")) {
       redditPosts = (results[idx++] as any)?.value || [];
@@ -437,7 +444,8 @@ serve(async (req) => {
 
     console.log(`Data fetched — Called: ${apisCalled.join(",")} | Skipped: ${apisSkipped.join(",") || "none"} | Google: ${googleTrends.length}, YT BR: ${ytBR.length}, YT US: ${ytUS.length}, Reddit: ${redditPosts.length}, News: ${news.length}`);
 
-    // Build rankings — sorted by VIDEO views (not channel views)
+    // Build rankings — sorted by VIDEO views, focused on psychology/mental health
+    // BRASIL — trending + psicologia
     const brRanking = [...ytBR, ...ytNicheBR]
       .sort((a: any, b: any) => (b.raw_views || 0) - (a.raw_views || 0))
       .slice(0, 10)
@@ -445,20 +453,27 @@ serve(async (req) => {
         ...v,
         rank: i + 1,
         momentum_score: Math.max(50, 95 - i * 5),
-        why_relevant: `Vídeo com ${v.total_views || "N/A"} views`,
+        why_relevant: `🇧🇷 ${v.total_views || "N/A"} views`,
       }));
 
-    const worldRanking = [...ytUS, ...ytNicheEN]
+    // MUNDIAL (EUA + Europa) — prioridade máxima, menos riscos de conteúdo
+    const worldRanking = [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
+      .filter((v: any) => v.region !== "BR") // excluir Brasil
       .sort((a: any, b: any) => (b.raw_views || 0) - (a.raw_views || 0))
-      .slice(0, 10)
-      .map((v: any, i: number) => ({
-        ...v,
-        rank: i + 1,
-        momentum_score: Math.max(50, 95 - i * 5),
-        country: v.region === "US" ? "Estados Unidos" : "Internacional",
-        why_relevant: `Vídeo com ${v.total_views || "N/A"} views`,
-        adaptation_guide: "Traduzir e adaptar para o contexto brasileiro",
-      }));
+      .slice(0, 15) // mais vídeos no mundial (prioridade)
+      .map((v: any, i: number) => {
+        const regionMap: Record<string, string> = { US: "🇺🇸 EUA", GB: "🇬🇧 Reino Unido", DE: "🇩🇪 Alemanha" };
+        const country = regionMap[v.region] || "🌍 Internacional";
+        return {
+          ...v,
+          rank: i + 1,
+          momentum_score: Math.max(50, 98 - i * 3), // scores mais altos (prioridade)
+          country,
+          why_relevant: `${country} — ${v.total_views || "N/A"} views`,
+          adaptation_guide: "Traduzir, adaptar culturalmente e focar no gancho emocional para público BR",
+          risk_level: "baixo",
+        };
+      });
 
     // Save results
     const viralData = {
@@ -489,20 +504,50 @@ serve(async (req) => {
       value: viralData,
     }, { onConflict: "key" });
 
-    // Save video snapshots only when YouTube was freshly called
+    // Save video snapshots with view growth tracking
     if (apisCalled.includes("youtube")) {
-      for (const v of [...brRanking, ...worldRanking].slice(0, 15)) {
-        if (v.video_url) {
-          await supabase.from("video_snapshots").insert({
-            video_title: v.video_title || "",
-            creator: v.creator || "",
-            platform: "youtube",
-            region: v.region || "BR",
-            total_views: v.total_views || "",
-            momentum_score: v.momentum_score || 0,
-            metadata: { video_url: v.video_url, source: "api_real" },
-          });
-        }
+      // Prioritize world ranking (more snapshots saved)
+      const allVideos = [...worldRanking, ...brRanking];
+      for (const v of allVideos.slice(0, 20)) {
+        if (!v.video_url) continue;
+
+        // Check previous snapshot for this video to calculate growth
+        const { data: prevSnapshot } = await supabase
+          .from("video_snapshots")
+          .select("total_views, snapshot_hour")
+          .eq("metadata->>video_url", v.video_url)
+          .order("snapshot_hour", { ascending: false })
+          .limit(1)
+          .single();
+
+        const prevViews = prevSnapshot ? parseInt(prevSnapshot.total_views || "0") : 0;
+        const currentViews = v.raw_views || 0;
+        const viewsGrowth = prevViews > 0 ? currentViews - prevViews : 0;
+        const hoursElapsed = prevSnapshot
+          ? Math.max(1, (Date.now() - new Date(prevSnapshot.snapshot_hour).getTime()) / 3600000)
+          : 1;
+        const viewsPerHour = Math.round(viewsGrowth / hoursElapsed);
+
+        await supabase.from("video_snapshots").insert({
+          video_title: v.video_title || "",
+          creator: v.creator || "",
+          platform: "youtube",
+          region: v.region || v.country || "BR",
+          total_views: String(currentViews),
+          views_growth_1h: viewsPerHour > 0 ? `+${formatViews(String(viewsPerHour))}/h` : "0/h",
+          momentum_score: v.momentum_score || 0,
+          acceleration: viewsPerHour > 10000 ? "🔥 explodindo" : viewsPerHour > 1000 ? "📈 crescendo" : viewsPerHour > 0 ? "➡️ estável" : "⏸️ sem dados",
+          metadata: {
+            video_url: v.video_url,
+            raw_views: currentViews,
+            prev_views: prevViews,
+            views_growth: viewsGrowth,
+            views_per_hour: viewsPerHour,
+            country: v.country || v.region,
+            risk_level: v.risk_level || "normal",
+            source: "api_real",
+          },
+        });
       }
     }
 

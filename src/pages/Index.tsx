@@ -50,6 +50,7 @@ const Index = () => {
   const redditTrending = viralIntel?.reddit_trending || [];
   const newsTrending = viralIntel?.news_trending || [];
   const dataSources = viralIntel?.data_sources || [];
+  const rankingCriteria = viralIntel?.ranking_criteria || {};
 
   return (
     <DashboardLayout>

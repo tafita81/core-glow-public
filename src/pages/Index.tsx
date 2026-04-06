@@ -140,12 +140,14 @@ const Index = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {topVideosBrasil.slice(0, 10).map((v: any, i: number) => (
-                    <div key={i} className="flex items-start gap-2 text-xs">
+                  {topVideosBrasil.slice(0, 10).map((v: any, i: number) => {
+                    const videoUrl = v.video_url || v.url || (v.platform === "youtube" ? `https://www.youtube.com/results?search_query=${encodeURIComponent(v.video_title || v.top_video_title || "")}` : v.platform === "instagram" ? `https://www.instagram.com/explore/tags/${encodeURIComponent((v.video_title || "").split(" ")[0])}` : v.platform === "tiktok" ? `https://www.tiktok.com/search?q=${encodeURIComponent(v.video_title || "")}` : v.platform === "pinterest" ? `https://br.pinterest.com/search/pins/?q=${encodeURIComponent(v.video_title || "")}` : "#");
+                    return (
+                    <a key={i} href={videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors group/link">
                       <span className="font-bold text-primary min-w-[20px]">#{v.rank || i + 1}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
-                          <p className="font-medium truncate">
+                          <p className="font-medium truncate group-hover/link:text-primary transition-colors">
                             🎬 {v.video_title || v.top_video_title || v.channel}
                           </p>
                           {v.momentum_score && (
@@ -155,7 +157,7 @@ const Index = () => {
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {v.creator || v.channel} • {v.platform}
+                          {v.creator || v.channel} • {v.platform} • <span className="text-primary/60 underline">abrir ↗</span>
                         </p>
                         {v.total_views && (
                           <p className="text-[10px] text-success font-medium">👁 {v.total_views}</p>
@@ -168,8 +170,9 @@ const Index = () => {
                           <p className="text-[10px] text-primary/70 truncate">🔁 {v.replication_strategy}</p>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    </a>
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}

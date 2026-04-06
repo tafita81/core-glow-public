@@ -41,7 +41,7 @@ function getDailyBudget(monthlyLimit: number, daysInMonth = 31): number {
 // Google Trends RSS: unlimited, no key needed
 
 const API_LIMITS = {
-  youtube: { daily_calls: 10, daily_units: 10000, units_per_call: 202 },
+  youtube: { daily_calls: 8, daily_units: 10000, units_per_call: 305 },
   reddit: { daily_calls: 3 },
   newsapi: { daily_calls: 3, daily_requests: 100 },
   serpapi: { monthly_searches: 100, daily_calls: 3 },

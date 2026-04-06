@@ -136,8 +136,11 @@ const Index = () => {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    🇧🇷 Top Vídeos Brasil — Mais Views AGORA
+                    🇧🇷 Top Vídeos Brasil — YouTube Trending
                   </CardTitle>
+                  {viralIntel?.data_source === "youtube_trending_real" && (
+                    <p className="text-[9px] text-muted-foreground">✅ Dados reais do YouTube • Atualizado: {viralIntel?.updated_at ? new Date(viralIntel.updated_at).toLocaleString("pt-BR") : ""}</p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {topVideosBrasil.slice(0, 10).map((v: any, i: number) => {

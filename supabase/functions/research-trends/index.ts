@@ -313,48 +313,55 @@ serve(async (req) => {
     const redditSecret = getSetting("reddit_client_secret") as string | null;
     const newsApiKey = getSetting("newsapi_key") as string | null;
 
-    // Check rate limits before calling each API
+    // Check rate limits before calling each API (daily + monthly + units)
     const promises: Promise<any>[] = [fetchGoogleTrends()];
     const apisCalled: string[] = ["google_trends"];
     const apisSkipped: string[] = [];
 
-    if (youtubeApiKey && shouldCallApi("youtube", currentHour)) {
-      const ytUsage = await checkDailyUsage(supabase, "youtube");
-      if (ytUsage < DAILY_LIMITS.youtube) {
+    if (youtubeApiKey) {
+      const check = await canCallApi(supabase, "youtube", currentHour);
+      if (check.allowed) {
         promises.push(fetchYouTubeTrending(youtubeApiKey, "BR"));
         promises.push(fetchYouTubeTrending(youtubeApiKey, "US"));
         promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental ansiedade"));
         promises.push(searchYouTubeNiche(youtubeApiKey, "psychology mental health anxiety self improvement"));
         apisCalled.push("youtube");
       } else {
-        apisSkipped.push("youtube (daily limit reached)");
+        apisSkipped.push(`youtube (${check.reason})`);
       }
-    } else if (youtubeApiKey) {
-      apisSkipped.push("youtube (rate schedule)");
     }
 
-    if (redditClientId && redditSecret && shouldCallApi("reddit", currentHour)) {
-      const redditUsage = await checkDailyUsage(supabase, "reddit");
-      if (redditUsage < DAILY_LIMITS.reddit) {
+    if (redditClientId && redditSecret) {
+      const check = await canCallApi(supabase, "reddit", currentHour);
+      if (check.allowed) {
         promises.push(fetchRedditTrending(redditClientId, redditSecret));
         apisCalled.push("reddit");
       } else {
-        apisSkipped.push("reddit (daily limit reached)");
+        apisSkipped.push(`reddit (${check.reason})`);
       }
-    } else if (redditClientId) {
-      apisSkipped.push("reddit (rate schedule)");
     }
 
-    if (newsApiKey && shouldCallApi("newsapi", currentHour)) {
-      const newsUsage = await checkDailyUsage(supabase, "newsapi");
-      if (newsUsage < DAILY_LIMITS.newsapi) {
+    if (newsApiKey) {
+      const check = await canCallApi(supabase, "newsapi", currentHour);
+      if (check.allowed) {
         promises.push(fetchMentalHealthNews(newsApiKey));
         apisCalled.push("newsapi");
       } else {
-        apisSkipped.push("newsapi (daily limit reached)");
+        apisSkipped.push(`newsapi (${check.reason})`);
       }
-    } else if (newsApiKey) {
-      apisSkipped.push("newsapi (rate schedule)");
+    }
+
+    // SerpAPI monthly limit check
+    const serpApiKey = getSetting("serpapi_key") as string | null;
+    if (serpApiKey) {
+      const check = await canCallApi(supabase, "serpapi", currentHour);
+      if (check.allowed) {
+        apisCalled.push("serpapi");
+        // SerpAPI call would go here when integrated
+        await logApiCall(supabase, "serpapi", 1);
+      } else {
+        apisSkipped.push(`serpapi (${check.reason})`);
+      }
     }
 
     const results = await Promise.allSettled(promises);
@@ -373,7 +380,7 @@ serve(async (req) => {
     }
     if (apisCalled.includes("reddit")) {
       redditPosts = (results[idx++] as any)?.value || [];
-      await logApiCall(supabase, "reddit", 1);
+      await logApiCall(supabase, "reddit", 5); // 1 auth + 4 subreddit calls
     }
     if (apisCalled.includes("newsapi")) {
       news = (results[idx++] as any)?.value || [];

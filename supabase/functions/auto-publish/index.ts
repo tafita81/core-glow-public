@@ -6,6 +6,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Optimal number of posts per day per platform (industry best practice)
+const DAILY_POST_LIMITS: Record<string, number> = {
+  instagram: 2,    // 1-2 posts/day (feed) — mais satura o algoritmo
+  youtube: 1,      // 1 vídeo/dia máximo — qualidade > quantidade
+  tiktok: 3,       // 1-3 vídeos/dia — plataforma recompensa volume
+  whatsapp: 3,     // 2-3 mensagens/dia — não ser spam
+  pinterest: 5,    // 3-5 pins/dia — plataforma de alto volume
+  facebook: 2,     // 1-2 posts/dia — alcance cai com excesso
+  linkedin: 1,     // 1 post/dia — profissional, qualidade importa
+  twitter: 5,      // 3-5 tweets/dia — plataforma de alto volume
+};
+
+// Check how many posts were already published today for a platform
+async function getTodayPublishCount(supabase: any, platform: string): Promise<number> {
+  const today = new Date().toISOString().split("T")[0];
+  const { count } = await supabase
+    .from("contents")
+    .select("id", { count: "exact", head: true })
+    .eq("channel", platform)
+    .eq("status", "publicado")
+    .gte("published_at", `${today}T00:00:00Z`);
+  return count || 0;
+}
+
+function getRemainingSlots(dailyLimit: number, published: number): number {
+  return Math.max(0, dailyLimit - published);
+}
+
 // Optimal posting times for Brazil (UTC-3 → UTC)
 function isOptimalTime(platform: string): boolean {
   const utcHour = new Date().getUTCHours();

@@ -6,9 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function publishToInstagram(token: string, pageId: string, content: any) {
+async function publishToInstagram(token: string, pageId: string, content: any, bookMention?: string) {
   const hashtags = extractHashtags(content.body || "");
-  const caption = `${content.title}\n\n${(content.body || "").replace(/---METADATA---[\s\S]*/, "").slice(0, 1800)}\n\n${hashtags}\n\n💬 Entre na comunidade gratuita — link na bio`;
+  const bookLine = bookMention ? `\n\n📚 ${bookMention}` : "";
+  const caption = `${content.title}\n\n${(content.body || "").replace(/---METADATA---[\s\S]*/, "").slice(0, 1700)}${bookLine}\n\n${hashtags}\n\n💬 Entre na comunidade gratuita — link na bio`;
 
   if (content.thumbnail_url || content.media_url) {
     // Create media container with image
@@ -183,6 +184,16 @@ serve(async (req) => {
     const { data: content, error: contentErr } = await supabase.from("contents").select("*").eq("id", content_id).single();
     if (contentErr || !content) throw new Error("Conteúdo não encontrado");
 
+    // Get book catalog for subtle mentions
+    const { data: catalogRow } = await supabase.from("settings").select("value").eq("key", "amazon_book_catalog").single();
+    const bookCatalog = (catalogRow?.value as any) || {};
+    const books = bookCatalog.catalog || [];
+    // Pick a relevant book based on content topic
+    const relevantBook = books.find((b: any) => 
+      content.topic && b.connection_to_topic && b.connection_to_topic.toLowerCase().includes(content.topic.toLowerCase())
+    ) || books[0];
+    const bookMention = relevantBook ? relevantBook.instagram_caption || `Leitura que recomendo: "${relevantBook.title}" — ${relevantBook.amazon_url || ""}` : "";
+
     const { data: channels } = await supabase.from("channels").select("*, channel_tokens(*)").eq("is_connected", true);
     const results: any[] = [];
 
@@ -197,7 +208,7 @@ serve(async (req) => {
           case "instagram": {
             const pageId = tokens.find((t: any) => t.token_type === "page_id")?.token_value;
             if (!pageId) { results.push({ platform: "instagram", success: false, error: "Page ID não configurado" }); continue; }
-            result = await publishToInstagram(accessToken, pageId, content);
+            result = await publishToInstagram(accessToken, pageId, content, bookMention);
             break;
           }
           case "youtube":

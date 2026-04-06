@@ -35,6 +35,23 @@ serve(async (req) => {
     const viralIntel = (viralSetting?.value as any) || {};
     const momentumAnalysis = viralIntel.momentum_analysis || {};
 
+    // Get Amazon affiliate config
+    const { data: amazonRow } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "amazon_affiliate_tag")
+      .single();
+    const amazonConfig = (amazonRow?.value as any) || {};
+    const affiliateTag = amazonConfig.tag || "";
+
+    // Get curated book catalog
+    const { data: catalogRow } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "amazon_book_catalog")
+      .single();
+    const bookCatalog = (catalogRow?.value as any) || {};
+
     // Get existing groups
     const { data: groups } = await supabase.from("whatsapp_groups").select("*").eq("is_active", true);
 
@@ -59,7 +76,15 @@ TIPOS DE CONTEÚDO WhatsApp:
 - "exclusivo": Conteúdo mais aprofundado que NÃO foi publicado nas redes (valor exclusivo)
 - "dica_rapida": Dica prática de 2-3 linhas para aplicar no dia a dia
 - "bastidores": Compartilha rotina de estudos, vida de estudante de psicologia
-- "recomendacao": Indica livros, filmes, podcasts sobre o tema do momento
+- "recomendacao": Indica livros, filmes, podcasts sobre o tema do momento — para livros, inclua link Amazon de afiliados de forma NATURAL como "esse livro é incrível, vale muito" (NUNCA parecer anúncio)
+- "catalogo_sutil": Catálogo de 3-5 livros conectados ao tema da semana, como se fosse uma lista pessoal de leituras favoritas
+
+MONETIZAÇÃO SUTIL (ESTRATÉGIA AMAZON AFILIADOS):
+- NUNCA anuncie livros diretamente — sempre como recomendação genuína
+- Use frases como: "Esse livro mudou minha visão sobre X", "Se vocês gostaram desse tema, esse livro vai muito além"
+- Conecte livros com as DORES e TEMAS que aparecem nas conversas do grupo
+- Em conteúdo "recomendacao" e "catalogo_sutil", inclua links Amazon com tag de afiliados
+- Formato de link: https://www.amazon.com.br/dp/{ASIN}?tag={AFFILIATE_TAG}
 
 REGRAS:
 - Linguagem INFORMAL e acolhedora (como amiga próxima)
@@ -73,6 +98,11 @@ ${momentumAnalysis.fastest_growing_topic ? `TEMA EM ALTA AGORA: ${momentumAnalys
 ${(momentumAnalysis.emerging_trends || []).length > 0 ? `TENDÊNCIAS EMERGENTES: ${JSON.stringify(momentumAnalysis.emerging_trends)}` : ""}
 
 TIPO DE GRUPO: ${targetGroup}
+${affiliateTag ? `\nAMAZON AFILIADOS (Tag: ${affiliateTag}):
+- Para tipos "recomendacao" e "catalogo_sutil", inclua links de livros Amazon
+- Catálogo curado disponível: ${(bookCatalog.catalog || []).slice(0, 5).map((b: any) => `"${b.title}" por ${b.author} — ${b.amazon_url || `https://www.amazon.com.br/dp/${b.asin}?tag=${affiliateTag}`}`).join("; ") || "gere recomendações de livros reais best-sellers"}
+- SEMPRE use o tag ${affiliateTag} nos links
+- Formato: https://www.amazon.com.br/dp/ASIN?tag=${affiliateTag}` : ""}
 - "geral": Grupo principal, conteúdo variado
 - "ansiedade": Grupo focado em ansiedade e autocuidado
 - "relacionamentos": Grupo focado em relacionamentos e apego

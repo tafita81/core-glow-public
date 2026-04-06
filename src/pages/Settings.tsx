@@ -190,6 +190,7 @@ export default function SettingsPage() {
     if (settings) {
       const heygenKey = settings.find((s) => s.key === "heygen_api_key")?.value;
       const elevenKey = settings.find((s) => s.key === "elevenlabs_api_key")?.value;
+      const amazonConfig = settings.find((s) => s.key === "amazon_affiliate_tag")?.value as any;
       const saved: Record<string, boolean> = {};
       const vals: Record<string, string> = {};
       if (heygenKey && typeof heygenKey === "string" && heygenKey.length > 0) {
@@ -199,6 +200,11 @@ export default function SettingsPage() {
       if (elevenKey && typeof elevenKey === "string" && elevenKey.length > 0) {
         saved.elevenlabs = true;
         vals.elevenlabs = elevenKey;
+      }
+      if (amazonConfig?.tag) {
+        saved.amazon = true;
+        vals.amazon_tag = amazonConfig.tag;
+        if (amazonConfig.store_id) vals.amazon_store_id = amazonConfig.store_id;
       }
       setSavedApiKeys(saved);
       setApiKeys((prev) => ({ ...vals, ...prev }));
@@ -403,6 +409,70 @@ export default function SettingsPage() {
                 </Card>
               );
             })}
+          </CardContent>
+        </Card>
+
+        {/* AMAZON AFFILIATE */}
+        <Card className="border-amber-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-heading text-lg flex items-center gap-2">
+              📚 Amazon Afiliados
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Catálogo de livros recomendados automaticamente nas redes e WhatsApp — sem parecer anúncio, como recomendação genuína.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-[11px]">Tag de Afiliado Amazon</Label>
+              <Input
+                type="text"
+                placeholder="ex: danielapsico-20"
+                value={apiKeys.amazon_tag || ""}
+                onChange={(e) => setApiKeys((prev) => ({ ...prev, amazon_tag: e.target.value }))}
+                className="h-8 text-xs"
+              />
+              <p className="text-[9px] text-muted-foreground">
+                Acesse programa de afiliados Amazon (associados.amazon.com.br) → copie seu Tag ID. O cérebro incluirá links de livros relevantes em cada conteúdo.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Store ID Amazon (opcional)</Label>
+              <Input
+                type="text"
+                placeholder="ex: danielapsicologia"
+                value={apiKeys.amazon_store_id || ""}
+                onChange={(e) => setApiKeys((prev) => ({ ...prev, amazon_store_id: e.target.value }))}
+                className="h-8 text-xs"
+              />
+              <p className="text-[9px] text-muted-foreground">
+                Se tiver uma Amazon Storefront, cole o ID para links diretos à sua loja curada.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="w-full h-8 text-xs"
+              onClick={async () => {
+                setSavingApiKey("amazon");
+                try {
+                  const tag = apiKeys.amazon_tag?.trim();
+                  const storeId = apiKeys.amazon_store_id?.trim();
+                  if (!tag) { toast({ title: "Insira o Tag de Afiliado", variant: "destructive" }); return; }
+                  await supabase.from("settings").upsert({ key: "amazon_affiliate_tag", value: { tag, store_id: storeId || null } }, { onConflict: "key" });
+                  setSavedApiKeys((prev) => ({ ...prev, amazon: true }));
+                  queryClient.invalidateQueries({ queryKey: ["settings"] });
+                  toast({ title: "✅ Amazon Afiliados configurado!", description: "O cérebro vai incluir recomendações de livros automaticamente." });
+                } catch { toast({ title: "Erro ao salvar", variant: "destructive" }); }
+                finally { setSavingApiKey(null); }
+              }}
+              disabled={savingApiKey === "amazon" || !apiKeys.amazon_tag?.trim()}
+            >
+              {savingApiKey === "amazon" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+              Salvar Amazon Afiliados
+            </Button>
+            {savedApiKeys.amazon && (
+              <p className="text-[10px] text-green-400">✅ Catálogo ativo — livros serão recomendados em todas as plataformas</p>
+            )}
           </CardContent>
         </Card>
 

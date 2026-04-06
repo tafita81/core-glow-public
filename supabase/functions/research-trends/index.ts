@@ -226,6 +226,8 @@ async function searchYouTubeNiche(apiKey: string, query: string): Promise<any[]>
     const statsData = await statsRes.json();
     return (statsData.items || []).map((item: any) => ({
       video_title: item.snippet?.title || "",
+      description: item.snippet?.description || "",
+      channel_title: item.snippet?.channelTitle || "",
       video_url: `https://www.youtube.com/watch?v=${item.id}`,
       creator: item.snippet?.channelTitle || "",
       creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,

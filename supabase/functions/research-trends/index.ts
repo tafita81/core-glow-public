@@ -185,9 +185,11 @@ async function fetchYouTubeTrending(apiKey: string, regionCode: string): Promise
       creator: item.snippet?.channelTitle || "",
       creator_url: `https://www.youtube.com/channel/${item.snippet?.channelId}`,
       total_views: formatViews(item.statistics?.viewCount),
+      raw_views: parseInt(item.statistics?.viewCount || "0"),
+      likes: parseInt(item.statistics?.likeCount || "0"),
+      comments: parseInt(item.statistics?.commentCount || "0"),
       platform: "youtube",
       region: regionCode,
-      category: item.snippet?.categoryId,
       published_at: item.snippet?.publishedAt,
     }));
   } catch (e) {

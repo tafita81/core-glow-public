@@ -356,14 +356,14 @@ serve(async (req) => {
     if (youtubeApiKey) {
       const check = await canCallApi(supabase, "youtube", currentHour, forceAll);
       if (check.allowed) {
-        // BRASIL — trending geral + busca focada em psicologia
+        // BRASIL — trending geral + busca focada em psicologia (30 dias, mais resultados)
         promises.push(fetchYouTubeTrending(youtubeApiKey, "BR"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental terapia ansiedade depressão"));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psicologia saúde mental ansiedade depressão terapia", 30));
         // MUNDIAL (EUA + Europa) — prioridade, menos riscos
         promises.push(fetchYouTubeTrending(youtubeApiKey, "US"));
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology therapy mental health anxiety depression self improvement"));
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology mental health anxiety depression therapy self improvement", 30));
         promises.push(fetchYouTubeTrending(youtubeApiKey, "GB")); // Reino Unido
-        promises.push(searchYouTubeNiche(youtubeApiKey, "psychologie therapie mentale gesundheit angst")); // Alemanha
+        promises.push(searchYouTubeNiche(youtubeApiKey, "psychology therapy mental health motivational", 30)); // broader
         apisCalled.push("youtube");
       } else {
         apisSkipped.push(`youtube (${check.reason})`);

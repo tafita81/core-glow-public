@@ -5,6 +5,7 @@ import { PerformanceChart } from "@/components/PerformanceChart";
 import { AgentStatus } from "@/components/AgentStatus";
 import { TopicsRanking } from "@/components/TopicsRanking";
 import { PendingActions } from "@/components/PendingActions";
+import { VideoRankingCard } from "@/components/VideoRankingCard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, Zap, TrendingUp, Target, Users, DollarSign, Lightbulb } from "lucide-react";

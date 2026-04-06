@@ -98,6 +98,11 @@ ${momentumAnalysis.fastest_growing_topic ? `TEMA EM ALTA AGORA: ${momentumAnalys
 ${(momentumAnalysis.emerging_trends || []).length > 0 ? `TENDÊNCIAS EMERGENTES: ${JSON.stringify(momentumAnalysis.emerging_trends)}` : ""}
 
 TIPO DE GRUPO: ${targetGroup}
+${affiliateTag ? `\nAMAZON AFILIADOS (Tag: ${affiliateTag}):
+- Para tipos "recomendacao" e "catalogo_sutil", inclua links de livros Amazon
+- Catálogo curado disponível: ${(bookCatalog.catalog || []).slice(0, 5).map((b: any) => `"${b.title}" por ${b.author} — ${b.amazon_url || `https://www.amazon.com.br/dp/${b.asin}?tag=${affiliateTag}`}`).join("; ") || "gere recomendações de livros reais best-sellers"}
+- SEMPRE use o tag ${affiliateTag} nos links
+- Formato: https://www.amazon.com.br/dp/ASIN?tag=${affiliateTag}` : ""}
 - "geral": Grupo principal, conteúdo variado
 - "ansiedade": Grupo focado em ansiedade e autocuidado
 - "relacionamentos": Grupo focado em relacionamentos e apego

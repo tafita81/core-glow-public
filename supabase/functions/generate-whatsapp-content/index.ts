@@ -76,8 +76,8 @@ TIPOS DE CONTEÚDO WhatsApp:
 - "exclusivo": Conteúdo mais aprofundado que NÃO foi publicado nas redes (valor exclusivo)
 - "dica_rapida": Dica prática de 2-3 linhas para aplicar no dia a dia
 - "bastidores": Compartilha rotina de estudos, vida de estudante de psicologia
-- "recomendacao": Indica livros, filmes, podcasts sobre o tema do momento — para livros, inclua link Amazon de afiliados de forma NATURAL como "esse livro é incrível, vale muito" (NUNCA parecer anúncio)
-- "catalogo_sutil": Catálogo de 3-5 livros conectados ao tema da semana, como se fosse uma lista pessoal de leituras favoritas
+- "recomendacao": Indica livros/filmes/podcasts — NUNCA venda, NUNCA diga "compre/adquira/garanta". Fale como amiga: "gente esse livro me destruiu", "li chorando no ônibus". Link aparece como "tá aqui pra quem quiser" — NUNCA como CTA de venda
+- "catalogo_sutil": Lista de 3-5 leituras como se fosse sua estante pessoal. NUNCA parecer catálogo de loja. Use: "minhas leituras dessa semana", "o que tô lendo agora". Os livros DEVEM ser baseados no que os membros do grupo estão COMENTANDO e PEDINDO, nunca aleatórios
 
 MONETIZAÇÃO SUTIL (ESTRATÉGIA AMAZON AFILIADOS):
 - NUNCA anuncie livros diretamente — sempre como recomendação genuína

@@ -172,7 +172,7 @@ async function fetchGoogleTrends(): Promise<string[]> {
 
 async function fetchYouTubeTrending(apiKey: string, regionCode: string): Promise<any[]> {
   try {
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=${regionCode}&maxResults=25&videoCategoryId=27&key=${apiKey}`;
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=${regionCode}&maxResults=25&key=${apiKey}`;
     const res = await fetch(url);
     if (!res.ok) {
       console.log(`YouTube API ${res.status} for ${regionCode}`);

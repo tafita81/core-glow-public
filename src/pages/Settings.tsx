@@ -18,91 +18,198 @@ const PLATFORMS = [
     id: "instagram",
     name: "Instagram",
     emoji: "📸",
+    setupGuide: [
+      "1. Acesse developers.facebook.com",
+      "2. 'Meus Apps' → 'Criar App' → tipo 'Business'",
+      "3. 'Adicionar Produto' → 'Instagram Graph API' → Configurar",
+      "4. 'Ferramentas' → 'Graph API Explorer' → selecione seu app",
+      "5. 'Gerar Token de Acesso' → login no Instagram",
+      "6. Permissões: instagram_basic, instagram_content_publish, instagram_manage_insights",
+      "7. Token longo (60 dias): 'Access Token Debugger' → 'Estender Token'",
+      "8. Page ID: GET /me/accounts → copie o campo 'id'",
+    ],
     fields: [
-      { key: "access_token", label: "Access Token (Graph API)", placeholder: "Cole seu Instagram Graph API Access Token", help: "developers.facebook.com → Instagram Graph API — permite publicar, ler métricas, editar perfil" },
-      { key: "page_id", label: "Page/Account ID", placeholder: "ID da conta profissional", help: "ID numérico da conta — encontre em Business Settings" },
-      { key: "business_id", label: "Business Account ID", placeholder: "ID do Business Manager", help: "Necessário para insights avançados e gestão de anúncios" },
-      { key: "refresh_token", label: "Long-Lived Token / Refresh", placeholder: "Token de longa duração (60 dias)", help: "Gere um long-lived token para não expirar rápido" },
+      { key: "access_token", label: "Access Token (Graph API)", placeholder: "Cole seu Instagram Graph API Access Token", help: "Graph API Explorer → Gerar Token" },
+      { key: "page_id", label: "Page/Account ID", placeholder: "ID da conta profissional", help: "GET /me/accounts → campo 'id'" },
+      { key: "business_id", label: "Business Account ID", placeholder: "ID do Business Manager", help: "Business Settings → Business Info" },
+      { key: "refresh_token", label: "Long-Lived Token", placeholder: "Token de longa duração (60 dias)", help: "Access Token Debugger → Estender" },
     ],
   },
   {
     id: "youtube",
     name: "YouTube",
     emoji: "🎬",
+    setupGuide: [
+      "1. Acesse console.cloud.google.com",
+      "2. Crie projeto → 'APIs e Serviços' → 'Biblioteca'",
+      "3. Pesquise 'YouTube Data API v3' → Ativar",
+      "4. 'Credenciais' → '+ Criar Credenciais' → 'Chave de API'",
+      "5. Copie a chave gerada (10.000 units/dia grátis)",
+      "6. Channel ID: youtube.com → seu canal → URL /channel/UCxxxxx",
+      "7. Para upload: Credenciais → OAuth 2.0 → tipo 'App da Web'",
+    ],
     fields: [
-      { key: "api_key", label: "API Key (Data API v3)", placeholder: "Cole sua YouTube Data API Key", help: "console.cloud.google.com → YouTube Data API v3" },
-      { key: "channel_id", label: "Channel ID", placeholder: "UCxxxxxxx", help: "youtube.com/account_advanced" },
-      { key: "access_token", label: "OAuth Access Token", placeholder: "Token OAuth para upload e edição", help: "Permite publicar vídeos, editar títulos/descrições/thumbnails, gerenciar playlists" },
-      { key: "refresh_token", label: "OAuth Refresh Token", placeholder: "Refresh token para renovar automaticamente", help: "O cérebro renova o token automaticamente quando expirar" },
-      { key: "client_id", label: "OAuth Client ID", placeholder: "Client ID do Google Cloud", help: "console.cloud.google.com → Credentials → OAuth 2.0" },
-      { key: "client_secret", label: "OAuth Client Secret", placeholder: "Client Secret do Google Cloud", help: "Necessário junto com refresh_token para renovação automática" },
+      { key: "api_key", label: "API Key (Data API v3)", placeholder: "Cole sua YouTube Data API Key", help: "Credenciais → Chave de API" },
+      { key: "channel_id", label: "Channel ID", placeholder: "UCxxxxxxx", help: "URL do canal → /channel/UCxxxxx" },
+      { key: "access_token", label: "OAuth Access Token", placeholder: "Token OAuth para upload", help: "OAuth Playground → YouTube Data API v3" },
+      { key: "refresh_token", label: "OAuth Refresh Token", placeholder: "Refresh token", help: "Gerado no OAuth flow" },
+      { key: "client_id", label: "OAuth Client ID", placeholder: "Client ID do Google Cloud", help: "Credenciais → OAuth 2.0 → Client ID" },
+      { key: "client_secret", label: "OAuth Client Secret", placeholder: "Client Secret", help: "Credenciais → OAuth 2.0 → Secret" },
     ],
   },
   {
     id: "tiktok",
     name: "TikTok",
     emoji: "🎵",
+    setupGuide: [
+      "1. Acesse developers.tiktok.com",
+      "2. Crie conta dev → 'Manage Apps' → 'Create App'",
+      "3. Ative: Login Kit, Content Posting API",
+      "4. Em 'Keys': copie Client Key e Client Secret",
+      "5. Configure redirect URI do seu app",
+      "6. Gere Access Token via OAuth flow",
+    ],
     fields: [
-      { key: "access_token", label: "Access Token", placeholder: "Cole seu TikTok API Access Token", help: "developers.tiktok.com → Content Posting API — publica, lê métricas" },
-      { key: "open_id", label: "Open ID", placeholder: "Seu TikTok Open ID", help: "Identificador único da conta na API" },
-      { key: "refresh_token", label: "Refresh Token", placeholder: "Token de renovação automática", help: "O cérebro renova automaticamente quando expirar" },
-      { key: "client_key", label: "Client Key", placeholder: "App Client Key", help: "developers.tiktok.com → Manage Apps → Client Key" },
-      { key: "client_secret", label: "Client Secret", placeholder: "App Client Secret", help: "Necessário para renovação automática de tokens" },
+      { key: "access_token", label: "Access Token", placeholder: "Cole seu TikTok Access Token", help: "OAuth flow → Access Token" },
+      { key: "open_id", label: "Open ID", placeholder: "Seu TikTok Open ID", help: "Retornado no OAuth flow" },
+      { key: "refresh_token", label: "Refresh Token", placeholder: "Token de renovação", help: "Retornado no OAuth flow" },
+      { key: "client_key", label: "Client Key", placeholder: "App Client Key", help: "Manage Apps → Client Key" },
+      { key: "client_secret", label: "Client Secret", placeholder: "App Client Secret", help: "Manage Apps → Client Secret" },
     ],
   },
   {
     id: "whatsapp",
     name: "WhatsApp Business",
     emoji: "💬",
+    setupGuide: [
+      "1. Acesse developers.facebook.com",
+      "2. Crie App tipo 'Business' → adicione 'WhatsApp'",
+      "3. 'WhatsApp' → 'Começar' → copie token temporário",
+      "4. Token permanente: System User no Business Manager",
+      "5. Copie Phone Number ID da configuração",
+    ],
     fields: [
-      { key: "access_token", label: "Access Token", placeholder: "Cole seu WhatsApp Business API Token", help: "developers.facebook.com → WhatsApp Business API" },
-      { key: "phone_number_id", label: "Phone Number ID", placeholder: "ID do número de telefone", help: "ID do número cadastrado no WhatsApp Business" },
-      { key: "business_account_id", label: "Business Account ID", placeholder: "ID da conta business", help: "Permite gerenciar templates de mensagem e grupos" },
+      { key: "access_token", label: "Access Token", placeholder: "Cole seu WhatsApp Token", help: "WhatsApp → Getting Started → Token" },
+      { key: "phone_number_id", label: "Phone Number ID", placeholder: "ID do número", help: "WhatsApp config → Phone Number ID" },
+      { key: "business_account_id", label: "Business Account ID", placeholder: "ID business", help: "Business Settings → ID" },
     ],
   },
   {
     id: "twitter",
     name: "X (Twitter)",
     emoji: "🐦",
+    setupGuide: [
+      "1. Acesse developer.twitter.com",
+      "2. Inscreva-se para Free tier (grátis)",
+      "3. Crie Projeto → App",
+      "4. 'Keys and Tokens' → copie API Key + API Secret",
+      "5. 'Generate' Access Token e Access Secret",
+      "6. 'Generate' Bearer Token",
+    ],
     fields: [
-      { key: "api_key", label: "API Key (Consumer Key)", placeholder: "Cole sua Twitter API Key", help: "developer.twitter.com → Project → Keys & Tokens" },
-      { key: "api_secret", label: "API Secret", placeholder: "Consumer Secret", help: "Par da API Key — necessário para autenticação" },
-      { key: "access_token", label: "Access Token", placeholder: "Token de acesso da conta", help: "Permite postar tweets, editar perfil, ler métricas" },
-      { key: "access_secret", label: "Access Token Secret", placeholder: "Secret do token de acesso", help: "Par do access token" },
-      { key: "bearer_token", label: "Bearer Token", placeholder: "Token para leitura de dados", help: "Usado para pesquisa de tweets e análise de tendências" },
+      { key: "api_key", label: "API Key", placeholder: "Consumer Key", help: "Keys → Consumer Keys → API Key" },
+      { key: "api_secret", label: "API Secret", placeholder: "Consumer Secret", help: "Keys → Consumer Keys → Secret" },
+      { key: "access_token", label: "Access Token", placeholder: "Token de acesso", help: "Keys → Auth Tokens → Access Token" },
+      { key: "access_secret", label: "Access Token Secret", placeholder: "Secret do token", help: "Keys → Auth Tokens → Secret" },
+      { key: "bearer_token", label: "Bearer Token", placeholder: "Bearer para leitura", help: "Keys → Bearer Token → Generate" },
     ],
   },
   {
     id: "linkedin",
     name: "LinkedIn",
     emoji: "💼",
+    setupGuide: [
+      "1. Acesse linkedin.com/developers",
+      "2. 'Create App' → preencha dados",
+      "3. 'Products' → adicione 'Share on LinkedIn'",
+      "4. 'Auth' → copie Client ID e Secret",
+      "5. Gere Access Token via OAuth 2.0",
+      "6. Person URN: GET /v2/me com o token",
+    ],
     fields: [
-      { key: "access_token", label: "Access Token", placeholder: "Cole seu LinkedIn Access Token", help: "linkedin.com/developers → OAuth — permite publicar posts e artigos" },
-      { key: "person_id", label: "Person URN / ID", placeholder: "urn:li:person:xxxxx", help: "Identificador do seu perfil — encontre via API /me" },
-      { key: "organization_id", label: "Organization ID (opcional)", placeholder: "ID da Company Page", help: "Se tiver uma Company Page, o cérebro publica lá também" },
+      { key: "access_token", label: "Access Token", placeholder: "Cole seu LinkedIn Token", help: "OAuth flow → Access Token" },
+      { key: "person_id", label: "Person URN / ID", placeholder: "urn:li:person:xxxxx", help: "GET /v2/me → campo 'id'" },
+      { key: "organization_id", label: "Organization ID (opcional)", placeholder: "ID da Company Page", help: "Admin URL contém o ID" },
     ],
   },
   {
     id: "facebook",
     name: "Facebook",
     emoji: "📘",
+    setupGuide: [
+      "1. Acesse developers.facebook.com",
+      "2. Use mesmo App do Instagram (ou crie novo)",
+      "3. 'Graph API Explorer' → 'Gerar Token de Página'",
+      "4. Permissões: pages_manage_posts, pages_read_engagement",
+      "5. Page ID: Configurações → Sobre → ID",
+      "6. App ID/Secret: Painel → Configurações → Básico",
+    ],
     fields: [
-      { key: "access_token", label: "Page Access Token", placeholder: "Token da página do Facebook", help: "developers.facebook.com → Page tokens — permite publicar, editar, gerenciar" },
-      { key: "page_id", label: "Page ID", placeholder: "ID numérico da página", help: "Encontre em Configurações da Página → Sobre" },
-      { key: "app_id", label: "App ID", placeholder: "ID do aplicativo Facebook", help: "developers.facebook.com → My Apps" },
-      { key: "app_secret", label: "App Secret", placeholder: "Secret do aplicativo", help: "Necessário para renovação automática de tokens" },
+      { key: "access_token", label: "Page Access Token", placeholder: "Token da página", help: "Graph API Explorer → Token de Página" },
+      { key: "page_id", label: "Page ID", placeholder: "ID da página", help: "Configurações → Sobre → ID" },
+      { key: "app_id", label: "App ID", placeholder: "ID do app", help: "Configurações → Básico → ID" },
+      { key: "app_secret", label: "App Secret", placeholder: "Secret do app", help: "Configurações → Básico → Secret" },
     ],
   },
   {
     id: "pinterest",
     name: "Pinterest",
     emoji: "📌",
+    setupGuide: [
+      "1. Acesse developers.pinterest.com",
+      "2. 'My Apps' → 'Create App'",
+      "3. Preencha dados → aguarde aprovação",
+      "4. 'Generate Token' → permissões: pins:read/write, boards:read/write",
+      "5. Board ID: URL do board → último segmento",
+    ],
     fields: [
-      { key: "access_token", label: "Access Token (API v5)", placeholder: "Cole seu Pinterest API Token", help: "developers.pinterest.com → Apps → gerar token com scopes: pins:read, pins:write, boards:read, boards:write, user_accounts:read" },
-      { key: "board_id", label: "Board ID principal", placeholder: "ID do board principal para psicologia", help: "Board onde o cérebro criará pins automaticamente — crie um board 'Psicologia & Saúde Mental'" },
-      { key: "refresh_token", label: "Refresh Token", placeholder: "Token de renovação automática", help: "O cérebro renova automaticamente quando expirar" },
-      { key: "app_id", label: "App ID", placeholder: "ID do app Pinterest", help: "developers.pinterest.com → My Apps → App ID" },
-      { key: "app_secret", label: "App Secret", placeholder: "Secret do app Pinterest", help: "Necessário para renovação automática de tokens" },
+      { key: "access_token", label: "Access Token (API v5)", placeholder: "Cole seu Pinterest Token", help: "My Apps → Generate Token" },
+      { key: "board_id", label: "Board ID principal", placeholder: "ID do board", help: "URL do board → ID" },
+      { key: "refresh_token", label: "Refresh Token", placeholder: "Token de renovação", help: "Gerado com o Access Token" },
+      { key: "app_id", label: "App ID", placeholder: "ID do app", help: "My Apps → App ID" },
+      { key: "app_secret", label: "App Secret", placeholder: "Secret do app", help: "My Apps → App Secret" },
+    ],
+  },
+  {
+    id: "reddit",
+    name: "Reddit",
+    emoji: "🔴",
+    setupGuide: [
+      "1. Acesse reddit.com/prefs/apps",
+      "2. Role até embaixo → 'create another app...'",
+      "3. Nome: qualquer (ex: 'TrendBot') → Tipo: 'script'",
+      "4. Redirect URI: http://localhost → 'create app'",
+      "5. Client ID: texto curto abaixo do nome",
+      "6. Client Secret: campo 'secret'",
+    ],
+    fields: [
+      { key: "client_id", label: "Client ID", placeholder: "Texto abaixo do nome do app", help: "prefs/apps → abaixo do nome" },
+      { key: "client_secret", label: "Client Secret", placeholder: "Campo 'secret'", help: "prefs/apps → secret" },
+    ],
+  },
+  {
+    id: "newsapi",
+    name: "NewsAPI",
+    emoji: "📰",
+    setupGuide: [
+      "1. Acesse newsapi.org/register",
+      "2. Preencha nome e email → 'Submit'",
+      "3. Copie a API Key (100 req/dia grátis)",
+    ],
+    fields: [
+      { key: "api_key", label: "API Key", placeholder: "Cole sua NewsAPI Key", help: "newsapi.org → Account → Key" },
+    ],
+  },
+  {
+    id: "serpapi",
+    name: "SerpAPI (Google Trends)",
+    emoji: "🔍",
+    setupGuide: [
+      "1. Acesse serpapi.com → crie conta grátis",
+      "2. Dashboard → copie API Key (100 buscas/mês)",
+    ],
+    fields: [
+      { key: "api_key", label: "API Key", placeholder: "Cole sua SerpAPI Key", help: "Dashboard → API Key" },
     ],
   },
 ];
@@ -374,6 +481,17 @@ export default function SettingsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-3 space-y-2.5">
+                    {/* Setup Guide */}
+                    {(platform as any).setupGuide && (
+                      <div className="rounded-md bg-accent/50 border border-border p-3 mb-2">
+                        <p className="text-[11px] font-medium text-foreground mb-1.5">📋 Passo a passo para obter:</p>
+                        <ol className="space-y-0.5">
+                          {(platform as any).setupGuide.map((step: string, i: number) => (
+                            <li key={i} className="text-[10px] text-muted-foreground leading-relaxed">{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
                     {platform.fields.map((field) => (
                       <div key={field.key} className="space-y-1">
                         <Label className="text-[11px]">{field.label}</Label>

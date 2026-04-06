@@ -482,9 +482,17 @@ serve(async (req) => {
     ];
 
     function isPsychRelated(video: any): boolean {
-      const text = `${video.video_title || ""} ${video.channel_title || ""} ${video.description || ""}`.toLowerCase();
-      // Must match at least one specific psychology term
-      return psychExact.some(kw => text.includes(kw));
+      const title = `${video.video_title || ""}`.toLowerCase();
+      const channel = `${video.channel_title || ""}`.toLowerCase();
+      const desc = `${video.description || ""}`.toLowerCase();
+      
+      // Strong match: keyword in title or channel name → definitely relevant
+      const titleMatch = psychExact.some(kw => title.includes(kw) || channel.includes(kw));
+      if (titleMatch) return true;
+      
+      // Weak match: keyword only in description → need at least 3 different keywords
+      const descMatches = psychExact.filter(kw => desc.includes(kw));
+      return descMatches.length >= 3;
     }
 
     // Build rankings — sorted by VIDEO views, ONLY psychology/mental health

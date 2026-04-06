@@ -45,6 +45,25 @@ serve(async (req) => {
       .single();
     const visualGuide = (visualGuideRow?.value as any) || {};
 
+    // Get active WhatsApp group with space for invite link
+    const { data: whatsappGroups } = await supabase
+      .from("whatsapp_groups")
+      .select("*")
+      .eq("is_active", true)
+      .order("members_count", { ascending: true });
+
+    // Find the group with most space (least members)
+    const activeWhatsappLink = whatsappGroups?.find((g: any) => g.invite_link && (g.members_count || 0) < 1024);
+    const whatsappInviteLink = activeWhatsappLink?.invite_link || null;
+    const whatsappGroupName = activeWhatsappLink?.name || "Comunidade";
+
+    // Get all social links from channels for cross-referencing
+    const { data: allChannels } = await supabase.from("channels").select("platform, name");
+    const socialLinks: Record<string, string> = {};
+    allChannels?.forEach((ch: any) => {
+      socialLinks[ch.platform] = ch.name;
+    });
+
     // Get channel tokens to know which platforms we can edit
     const { data: allTokens } = await supabase.from("channel_tokens").select("*");
     const tokensByChannel: Record<string, Record<string, string>> = {};

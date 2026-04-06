@@ -145,8 +145,10 @@ Retorne EXATAMENTE um JSON com esta estrutura:
     {
       "rank": 1,
       "video_title": "TÍTULO TRADUZIDO para PT-BR",
+      "video_url": "URL DIRETA do vídeo original",
       "original_title": "título original no idioma de origem",
       "creator": "nome",
+      "creator_url": "URL do perfil do criador",
       "platform": "youtube|instagram|tiktok",
       "country": "país (em português)",
       "total_views": "ex: 80M views",

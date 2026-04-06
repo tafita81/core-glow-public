@@ -498,8 +498,8 @@ serve(async (req) => {
 
     // Build rankings — sorted by VIDEO views, ONLY psychology/mental health
     // Minimum view thresholds to ensure quality rankings
-    const MIN_VIEWS_BR = 10000;      // 10K minimum for Brazil
-    const MIN_VIEWS_WORLD = 50000;   // 50K minimum for World
+    const MIN_VIEWS_BR = 1000000;      // 1M minimum for Brazil
+    const MIN_VIEWS_WORLD = 1000000;   // 1M minimum for World
 
     // BRASIL — trending + psicologia (filtrado + mínimo de views)
     const brRanking = [...ytBR, ...ytNicheBR]

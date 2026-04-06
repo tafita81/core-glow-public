@@ -212,68 +212,6 @@ const Index = () => {
               </Card>
             )}
 
-            {topVideosMundial.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    🌍 Top Vídeos Mundial — YouTube Trending
-                  </CardTitle>
-                  {viralIntel?.data_source === "youtube_trending_real" && (
-                    <p className="text-[9px] text-muted-foreground">✅ Dados reais do YouTube • Atualizado: {viralIntel?.updated_at ? new Date(viralIntel.updated_at).toLocaleString("pt-BR") : ""}</p>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {topVideosMundial.slice(0, 10).map((v: any, i: number) => {
-                    const buildSearchUrl = (title: string, platform: string, creator?: string) => {
-                      const q = encodeURIComponent(`${title} ${creator || ""}`.trim());
-                      if (platform === "youtube") return `https://www.youtube.com/results?search_query=${q}`;
-                      if (platform === "instagram") return `https://www.instagram.com/${creator?.replace(/^@/, "") || "explore"}`;
-                      if (platform === "tiktok") return `https://www.tiktok.com/search?q=${q}`;
-                      if (platform === "pinterest") return `https://www.pinterest.com/search/pins/?q=${q}`;
-                      return `https://www.google.com/search?q=${q}`;
-                    };
-                    const videoUrl = v.video_url || v.url || buildSearchUrl(v.original_title || v.video_title || "", v.platform, v.creator);
-                    return (
-                    <div
-                      key={i}
-                      onClick={() => window.open(videoUrl, "_blank")}
-                      className="flex items-start gap-2 text-xs hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer group/link"
-                    >
-                      <span className="font-bold text-primary min-w-[20px]">#{v.rank || i + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <p className="font-medium truncate group-hover/link:text-primary transition-colors">
-                            🎬 {v.video_title || v.top_video_title || v.channel}
-                          </p>
-                          {v.momentum_score && (
-                            <Badge variant="secondary" className="text-[9px] shrink-0">
-                              ⚡{v.momentum_score}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {v.creator || v.channel} • {v.platform} {v.country && `• ${v.country}`} • <span className="text-primary underline font-medium">ver vídeo ↗</span>
-                        </p>
-                        {v.total_views && (
-                          <p className="text-[10px] text-success font-medium">👁 {v.total_views}</p>
-                        )}
-                        {(v.views_growth_1h || v.growth_velocity) && (
-                          <p className="text-[10px] text-success truncate">📈 {v.views_growth_1h || v.growth_velocity} • {v.acceleration || ''}</p>
-                        )}
-                        <p className="text-muted-foreground truncate">{v.why_relevant || v.why_viral || v.why_growing_fast}</p>
-                        {v.adaptation_guide && (
-                          <p className="text-[10px] text-warning truncate">🔄 {v.adaptation_guide}</p>
-                        )}
-                        {v.insight_for_brazil && (
-                          <p className="text-[10px] text-success truncate">🇧🇷 {v.insight_for_brazil}</p>
-                        )}
-                      </div>
-                    </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
 
             <Card>
               <CardHeader className="pb-2">

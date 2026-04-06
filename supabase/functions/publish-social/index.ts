@@ -184,6 +184,16 @@ serve(async (req) => {
     const { data: content, error: contentErr } = await supabase.from("contents").select("*").eq("id", content_id).single();
     if (contentErr || !content) throw new Error("Conteúdo não encontrado");
 
+    // Get book catalog for subtle mentions
+    const { data: catalogRow } = await supabase.from("settings").select("value").eq("key", "amazon_book_catalog").single();
+    const bookCatalog = (catalogRow?.value as any) || {};
+    const books = bookCatalog.catalog || [];
+    // Pick a relevant book based on content topic
+    const relevantBook = books.find((b: any) => 
+      content.topic && b.connection_to_topic && b.connection_to_topic.toLowerCase().includes(content.topic.toLowerCase())
+    ) || books[0];
+    const bookMention = relevantBook ? relevantBook.instagram_caption || `Leitura que recomendo: "${relevantBook.title}" — ${relevantBook.amazon_url || ""}` : "";
+
     const { data: channels } = await supabase.from("channels").select("*, channel_tokens(*)").eq("is_connected", true);
     const results: any[] = [];
 

@@ -580,30 +580,52 @@ serve(async (req) => {
 
     console.log(`Data fetched — Called: ${apisCalled.join(",")} | Skipped: ${apisSkipped.join(",") || "none"} | Google: ${googleTrends.length}, YT BR: ${ytBR.length}, YT US: ${ytUS.length}, Reddit: ${redditPosts.length}, News: ${news.length}`);
 
-    // ===== FILTRO DE PSICOLOGIA (restritivo) =====
-    // Termos específicos — evita falsos positivos como "mind-blowing", "brainrot"
+    // ===== FILTRO DE PSICOLOGIA EXPANDIDO =====
+    // Ampliado para capturar TODOS os ângulos que viralizam em psicologia/saúde mental
     const psychExact = [
-      "psicolog", "psycholog", "mental health", "saúde mental", "terapia cognitiv",
-      "therap", "ansiedade", "anxiety disorder", "depressão", "depression",
-      "autoconhecimento", "self improvement", "self-improvement",
-      "narcisis", "narcisist", "trauma psic", "ptsd", "mindfulness",
-      "meditação", "meditation practice", "burnout", "transtorno",
-      "bipolar", "adhd", "tdah", "autismo", "autism spectrum",
-      "toxic relationship", "relacionamento tóxic", "attachment style", "apego",
-      "neurociência", "neuroscience", "cognitive behavior", "comportament",
-      "resiliência", "resilience", "autocuidado", "self-care", "self care",
-      "bem-estar mental", "mental wellbeing", "mental wellness",
-      "psychotherap", "psicotera", "aconselhamento", "counseling",
-      "panic attack", "pânico", "obsessive compulsive", "ocd", "toc",
-      "autoestima", "self-esteem", "self esteem", "emotional intelligence",
-      "inteligência emocional", "emotional regulation", "regulação emocional",
-      "inner child", "criança interior", "shadow work", "sombra",
-      "psychology tips", "dicas de psicologia", "mental health awareness",
-      "saúde emocional", "emotional health", "psychology explained",
-      "psicólogo", "psychologist", "psychiatr", "psiquiatr",
-      "anxiety tips", "overcome depression", "superar depressão",
-      "self development", "desenvolvimento pessoal", "personal development",
-      "stoicism", "estoicismo", "emotional healing", "cura emocional",
+      // Core psychology
+      "psicolog", "psycholog", "mental health", "saúde mental", "terapia",
+      "therap", "ansiedade", "anxiety", "depressão", "depression",
+      // Self-improvement (MAIOR engajamento no YouTube)
+      "autoconhecimento", "self improvement", "self-improvement", "self development",
+      "desenvolvimento pessoal", "personal development", "personal growth",
+      "motivation", "motivação", "discipline", "disciplina", "mindset",
+      "habit", "hábito", "procrastin", "productivity", "produtividade",
+      // Dark psychology & manipulation (VIRAL — milhões de views)
+      "narcisis", "narcisist", "narcissist", "dark psychology", "psicologia sombria",
+      "manipulation", "manipula", "gaslighting", "toxic people", "pessoa tóxica",
+      "sociopath", "psychopath", "psicopata", "emotional abuse", "abuso emocional",
+      "love bombing", "trauma bond", "covert narciss",
+      // Relationships (alto engajamento)
+      "toxic relationship", "relacionamento tóxic", "attachment", "apego",
+      "red flag", "bandeira vermelha", "boundaries", "limites",
+      "people pleaser", "codependen", "breakup", "término",
+      // Emotional intelligence
+      "emotional intelligence", "inteligência emocional", "emotional regulation",
+      "regulação emocional", "emotional healing", "cura emocional",
+      "overthinking", "pensamento excessivo", "rumination", "ruminação",
+      // Trauma & healing
+      "trauma", "ptsd", "inner child", "criança interior", "shadow work",
+      "healing", "cura", "recovery", "recuperação",
+      // Philosophy/Stoicism (VIRAL — milhões de views)
+      "stoicism", "estoicismo", "stoic", "marcus aurelius", "epictetus",
+      "philosophy", "filosofia", "wisdom", "sabedoria",
+      // Neuroscience & brain
+      "neurociência", "neuroscience", "brain", "cérebro", "dopamine", "dopamina",
+      "cognitive", "cognitiv", "neuroplasticity", "neuroplasticidade",
+      // Mindfulness
+      "mindfulness", "meditação", "meditation", "calm", "peace", "paz interior",
+      // Body language (VIRAL)
+      "body language", "linguagem corporal", "microexpress", "lie detection",
+      // Mental disorders (alto CPM)
+      "burnout", "transtorno", "bipolar", "adhd", "tdah", "autismo", "autism",
+      "ocd", "toc", "panic", "pânico", "social anxiety", "ansiedade social",
+      // Self-esteem
+      "autoestima", "self-esteem", "self esteem", "confidence", "confiança",
+      "self worth", "autovalor", "imposter syndrome", "síndrome do impostor",
+      // Success mindset
+      "success", "sucesso", "millionaire mindset", "wealth", "riqueza",
+      "financial freedom", "liberdade financeira", "entrepreneur", "empreendedor",
     ];
 
     function isPsychRelated(video: any): boolean {
@@ -611,56 +633,74 @@ serve(async (req) => {
       const channel = `${video.channel_title || ""}`.toLowerCase();
       const desc = `${video.description || ""}`.toLowerCase();
       
-      // Strong match: keyword in title or channel name → definitely relevant
+      // Strong match: keyword in title or channel name
       const titleMatch = psychExact.some(kw => title.includes(kw) || channel.includes(kw));
       if (titleMatch) return true;
       
-      // Weak match: keyword only in description → need at least 3 different keywords
+      // Weak match: keyword only in description → need at least 2 different keywords
       const descMatches = psychExact.filter(kw => desc.includes(kw));
-      return descMatches.length >= 3;
+      return descMatches.length >= 2;
     }
 
-    // ===== RANKING STRATEGY: MÁXIMA VIRALIZAÇÃO + MONETIZAÇÃO =====
-    // Critério: vídeos NOVOS (últimos 14 dias) que EXPLODIRAM
-    // Ranking por VIRAL SCORE = (views/dia) × engagement_multiplier
-    // Isso encontra vídeos que estão crescendo AGORA — ideal para surfar a onda
-    // Mínimo: 500K views (em 14 dias = crescimento real, não vídeo antigo)
+    // ===== RANKING STRATEGY v3: MÁXIMA VIRALIZAÇÃO + MONETIZAÇÃO + SEGUIDORES =====
+    // Mínimo: 500K views (vídeos que realmente explodiram nos últimos 14 dias)
+    // Ranking: viral_score (views/dia × freshness × engagement × monetização)
+    // Deduplica por video_url
     
-    const MIN_VIEWS = 500000; // 500K — vídeos que realmente explodiram
+    const MIN_VIEWS = 500000;
 
-    // BRASIL — trending + psicologia (ordenado por viral_score)
-    const brRanking = [...ytBR, ...ytNicheBR]
-      .filter(isPsychRelated)
-      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
-      .sort((a: any, b: any) => (b.viral_score || b.raw_views || 0) - (a.viral_score || a.raw_views || 0))
-      .slice(0, 10)
-      .map((v: any, i: number) => ({
+    function deduplicateVideos(videos: any[]): any[] {
+      const seen = new Set<string>();
+      return videos.filter(v => {
+        const key = v.video_url || v.video_title;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function buildRankingEntry(v: any, i: number, region?: string) {
+      const country = region || (v.region ? ({ US: "🇺🇸 EUA", GB: "🇬🇧 Reino Unido", DE: "🇩🇪 Alemanha" } as any)[v.region] || "🌍 Internacional" : "🇧🇷 Brasil");
+      
+      return {
         ...v,
         rank: i + 1,
-        momentum_score: Math.max(50, 95 - i * 5),
-        why_relevant: `🇧🇷 ${v.total_views} • ${formatViews(String(v.views_per_day || 0))}/dia • ${v.age_days || "?"}d • Eng: ${v.engagement_rate || 0}%`,
-      }));
-
-    // MUNDIAL — prioridade máxima, ordenado por viral_score
-    const worldRanking = [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
-      .filter((v: any) => v.region !== "BR")
-      .filter(isPsychRelated)
-      .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
-      .sort((a: any, b: any) => (b.viral_score || b.raw_views || 0) - (a.viral_score || a.raw_views || 0))
-      .slice(0, 15)
-      .map((v: any, i: number) => {
-        const regionMap: Record<string, string> = { US: "🇺🇸 EUA", GB: "🇬🇧 Reino Unido", DE: "🇩🇪 Alemanha" };
-        const country = regionMap[v.region] || "🌍 Internacional";
-        return {
-          ...v,
-          rank: i + 1,
-          momentum_score: Math.max(50, 98 - i * 3),
+        momentum_score: v.viral_score ? Math.min(99, Math.round(50 + Math.log10(Math.max(1, v.viral_score)) * 8)) : 50,
+        country,
+        why_relevant: [
           country,
-          why_relevant: `${country} • ${v.total_views} • ${formatViews(String(v.views_per_day || 0))}/dia • ${v.age_days || "?"}d • Eng: ${v.engagement_rate || 0}%`,
-          adaptation_guide: "Traduzir, adaptar culturalmente e focar no gancho emocional para público BR",
-          risk_level: "baixo",
-        };
-      });
+          v.total_views,
+          `${formatViews(String(v.views_per_day || 0))}/dia`,
+          `${v.age_days}d`,
+          `💬${v.comment_rate || 0}%`,
+          `❤️${v.like_rate || 0}%`,
+          v.duration_label || "",
+        ].filter(Boolean).join(" • "),
+        adaptation_guide: region ? "Traduzir, adaptar gancho emocional e formato para público BR" : undefined,
+        risk_level: "baixo",
+      };
+    }
+
+    // BRASIL — trending + psicologia
+    const brRanking = deduplicateVideos(
+      [...ytBR, ...ytNicheBR]
+        .filter(isPsychRelated)
+        .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
+    )
+      .sort((a: any, b: any) => (b.viral_score || 0) - (a.viral_score || 0))
+      .slice(0, 10)
+      .map((v: any, i: number) => buildRankingEntry(v, i));
+
+    // MUNDIAL — prioridade máxima
+    const worldRanking = deduplicateVideos(
+      [...ytUS, ...ytNicheEN, ...ytGB, ...ytNicheDE]
+        .filter((v: any) => v.region !== "BR")
+        .filter(isPsychRelated)
+        .filter((v: any) => (v.raw_views || 0) >= MIN_VIEWS)
+    )
+      .sort((a: any, b: any) => (b.viral_score || 0) - (a.viral_score || 0))
+      .slice(0, 15)
+      .map((v: any, i: number) => buildRankingEntry(v, i, undefined));
 
     // Save results
     const viralData = {

@@ -20,7 +20,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <HashRouter basename="/core-glow-public">
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/content" element={<Content />} />

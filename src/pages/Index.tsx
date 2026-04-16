@@ -12,6 +12,7 @@ import { Eye, Zap, TrendingUp, Target, Users, DollarSign, Lightbulb, Brain } fro
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { psychologyVideosData } from "@/data/psychology-videos-48h";
 
 const Index = () => {
   const { data: contents } = useQuery({
@@ -26,8 +27,14 @@ const Index = () => {
   const { data: viralIntel } = useQuery({
     queryKey: ["viral-intelligence"],
     queryFn: async () => {
-      const { data } = await supabase.from("settings").select("value").eq("key", "viral_intelligence").single();
-      return data?.value as any;
+      try {
+        const { data } = await supabase.from("settings").select("value").eq("key", "viral_intelligence").single();
+        return data?.value as any;
+      } catch (error) {
+        // Se Supabase falhar, usar dados de Psicologia locais
+        console.log("Usando dados de Psicologia locais (Supabase indisponível)");
+        return psychologyVideosData as any;
+      }
     },
     refetchInterval: 60000, // Real-time: refresh every 60s
   });
